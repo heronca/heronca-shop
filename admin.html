@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Heron Admin</title><link rel="icon" href="/assets/heron-ca.png">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&family=Jost:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/heron.css">
+<style>
+.tabs{display:flex;gap:6px;margin:18px 0}
+label{display:block;margin:12px 0 4px}
+input,select,textarea{width:100%;font:inherit;padding:11px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:0}
+textarea{min-height:110px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.thumbs img{width:72px;aspect-ratio:4/5;object-fit:cover}
+.inv{display:grid;gap:10px}.inv .row{grid-template-columns:56px 1fr auto;border-bottom:1px solid var(--line);padding-bottom:10px}
+.inv .row img,.inv .noimg{width:56px;aspect-ratio:4/5;object-fit:cover;background:var(--cream)}
+.note{background:var(--cream);padding:10px 12px;margin:10px 0}
+</style></head>
+<body><main class="wrap" style="max-width:640px;padding-bottom:60px">
+<div class="bar"><img src="/assets/heron-wordmark.png" alt="Heron" style="height:22px"><span class="caps">Admin</span></div>
+
+<div id="login"><label>Password</label><input id="pw" type="password" autocomplete="current-password">
+<button class="btn" style="margin-top:12px" onclick="login()">Enter</button></div>
+
+<div id="app" hidden>
+<div class="tabs"><button class="chip on" data-t="add">Add item</button><button class="chip" data-t="inv">Inventory</button><button class="chip" data-t="imp">Import eBay</button></div>
+
+<section id="t-add">
+  <label>Photos (first one is the cover)</label><input id="photos" type="file" accept="image/*" multiple>
+  <div class="thumbs" id="thumbs"></div>
+  <label>Title</label><input id="title" placeholder="Vince Silk Slip Dress, Black">
+  <div class="two"><div><label>Category</label><select id="category"></select></div>
+  <div><label>Size</label><input id="size" placeholder="M"></div></div>
+  <div class="two"><div><label>Price on other shops ($)</label><input id="price" type="number" inputmode="decimal" step="0.01"></div>
+  <div><label>Condition</label><select id="cond"><option>New with tags</option><option>New without tags</option><option selected>Pre-owned, excellent</option><option>Pre-owned, good</option><option>Vintage</option></select></div></div>
+  <div class="small" id="siteprice"></div>
+  <label>Description</label><textarea id="desc" placeholder="Fabric, measurements, details"></textarea>
+  <button class="btn alt" style="margin-top:8px" disabled title="Turn on later">Write with AI (coming soon)</button>
+  <label>SKU (leave empty for automatic)</label><input id="sku" placeholder="HC-V-DR-0001">
+  <button class="btn" style="margin-top:16px" id="save" onclick="save()">Save to Square and the site</button>
+</section>
+
+<section id="t-inv" hidden><div class="note small">Items without photos are hidden on the site. Add photos to show them.</div>
+  <input id="filter" placeholder="Search title or SKU" oninput="drawInv()"><div class="inv" id="inv" style="margin-top:12px"></div></section>
+
+<section id="t-imp" hidden>
+  <div class="note small">Pick the eBay "Active listings" CSV. Each listing becomes a Square item with stock 1, its own SKU and the photos from that eBay listing. Titles already in Square are skipped, so it is safe to run again.</div>
+  <input id="csv" type="file" accept=".csv"><div id="impInfo" class="small" style="margin:10px 0"></div>
+  <button class="btn" id="impGo" disabled onclick="runImport()">Import</button>
+</section>
+</div>
+<div class="toast" id="toast"></div>
+</main>
+<script src="/assets/heron.js"></script>
+<script>
+let PW = sessionStorage.getItem("heron-pw") || "", PHOTOS = [], INV = [], ROWS = [];
+const A = (action, data) => api(action, data, { "x-admin-password": PW });
+$("#category").innerHTML = HERON.categories.map((c) => `<option>${c}</option>`).join("");
+document.querySelectorAll(".tabs .chip").forEach((b) => b.onclick = () => {
+  document.querySelectorAll(".tabs .chip").forEach((x) => x.classList.toggle("on", x === b));
+  ["add", "inv", "imp"].forEach((t) => $("#t-" + t).hidden = t !== b.dataset.t);
+  if (b.dataset.t === "inv") loadInv();
+});
+async function login() { PW = $("#pw").value || PW; try { await A("admin_list"); sessionStorage.setItem("heron-pw", PW); $("#login").hidden = true; $("#app").hidden = false; } catch (e) { toast(e.message); } }
+if (PW) login();
+
+// photos: crop to 4:5, max 1600px wide, jpeg
+function prep(file) { return new Promise((ok, no) => { const img = new Image(); img.onload = () => {
+  const r = 4 / 5; let w = img.width, h = img.height, sx = 0, sy = 0;
+  if (w / h > r) { sx = (w - h * r) / 2; w = h * r; } else { sy = (h - w / r) / 2; h = w / r; }
+  const W = Math.min(1600, w), c = document.createElement("canvas"); c.width = W; c.height = Math.round(W / r);
+  c.getContext("2d").drawImage(img, sx, sy, w, h, 0, 0, c.width, c.height); ok(c.toDataURL("image/jpeg", 0.85)); URL.revokeObjectURL(img.src);
+}; img.onerror = no; img.src = URL.createObjectURL(file); }); }
+$("#photos").onchange = async (e) => { PHOTOS = await Promise.all([...e.target.files].map(prep)); $("#thumbs").innerHTML = PHOTOS.map((p) => `<img src="${p}">`).join(""); };
+$("#price").oninput = () => { const p = +$("#price").value; $("#siteprice").textContent = p ? `Site price: $${(p * 0.9).toFixed(2)} (10% less)` : ""; };
+
+async function save() {
+  const item = { title: $("#title").value.trim(), category: $("#category").value, size: $("#size").value.trim(), price: +$("#price").value,
+    description: [`Condition: ${$("#cond").value}`, $("#desc").value.trim()].filter(Boolean).join("\n\n"), sku: $("#sku").value.trim() || undefined, images: PHOTOS };
+  if (!item.title || !item.price) return toast("Title and price are required");
+  if (!PHOTOS.length && !confirm("No photos. It will be saved but hidden on the site. Continue?")) return;
+  $("#save").disabled = true; $("#save").textContent = "Saving…";
+  try { const r = await A("admin_create", { item }); toast(`Saved ${r.skus[0] || ""}`);
+    ["title", "size", "price", "desc", "sku", "photos"].forEach((i) => $("#" + i).value = ""); PHOTOS = []; $("#thumbs").innerHTML = ""; $("#siteprice").textContent = "";
+  } catch (e) { toast(e.message); }
+  $("#save").disabled = false; $("#save").textContent = "Save to Square and the site";
+}
+
+async function loadInv() { $("#inv").innerHTML = "<p class='small'>Loading…</p>"; INV = (await A("admin_list")).items; drawInv(); }
+function drawInv() {
+  const f = $("#filter").value.toLowerCase();
+  $("#inv").innerHTML = INV.filter((x) => !f || (x.title + x.sku).toLowerCase().includes(f)).map((x) => `<div class="row">
+    ${x.images[0] ? `<img src="${x.images[0]}">` : `<div class="noimg"></div>`}
+    <div>${esc(x.title)}<div class="small">${esc(x.sku)} · ${money(x.price)} · ${x.qty > 0 ? "in stock" : "sold"} · ${x.images.length} photos</div></div>
+    <label class="chip" style="margin:0">+ Photos<input type="file" accept="image/*" multiple hidden onchange="addPhotos('${x.item_id}','${esc(x.sku)}',this)"></label></div>`).join("");
+}
+async function addPhotos(item_id, sku, input) {
+  toast("Uploading…"); try { const images = await Promise.all([...input.files].map(prep)); await A("admin_add_photos", { item_id, sku, images }); toast("Photos added"); loadInv(); } catch (e) { toast(e.message); }
+}
+
+// eBay CSV import
+function parseCSV(t) { const rows = []; let row = [], f = "", q = false;
+  for (let i = 0; i < t.length; i++) { const c = t[i];
+    if (q) { if (c === '"') { if (t[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true; else if (c === ",") { row.push(f); f = ""; } else if (c === "\n") { row.push(f.replace(/\r$/, "")); rows.push(row); row = []; f = ""; } else f += c; }
+  if (f || row.length) { row.push(f); rows.push(row); } return rows; }
+const MAP = { "Coats, Jackets & Vests": "Coats & Jackets", "Outerwear": "Coats & Jackets", "Dresses": "Dresses & Jumpsuits", "Jumpsuits & Rompers": "Dresses & Jumpsuits",
+  "Casual Button-Down Shirts": "Shirts", "Boots": "Shoes", "Heels": "Shoes", "Sandals": "Shoes", "Flats": "Shoes", "Athletic Shoes": "Shoes",
+  "Women's Bags & Handbags": "Bags & Accessories", "Bags": "Bags & Accessories", "Wallets": "Bags & Accessories", "Scarves & Wraps": "Bags & Accessories" };
+$("#csv").onchange = async (e) => {
+  const [h, ...rest] = parseCSV((await e.target.files[0].text()).replace(/^﻿/, "")); const k = (n) => h.indexOf(n);
+  ROWS = rest.filter((r) => r[k("Title")] && +r[k("Available quantity")] > 0).map((r) => ({
+    title: r[k("Title")].trim(), price: +(r[k("Current price")] || r[k("Start price")]),
+    category: MAP[r[k("eBay category 1 name")]] || "Tops", description: `Condition: ${r[k("Condition")]}`,
+    sku: (r[k("Custom label (SKU)")] || "").trim() || undefined, ebay: r[k("Item number")] }));
+  $("#impInfo").textContent = `${ROWS.length} listings ready. Photos are copied from each eBay listing. This takes a few minutes.`;
+  $("#impGo").disabled = !ROWS.length;
+};
+async function runImport() {
+  $("#impGo").disabled = true; let made = 0, skipped = 0, pics = 0;
+  try { for (let i = 0; i < ROWS.length; i += 4) { $("#impInfo").textContent = `Importing ${i} / ${ROWS.length}…`;
+      const r = await A("admin_import", { rows: ROWS.slice(i, i + 4) }); made += r.created; skipped += r.skipped; pics += r.with_photos; }
+    $("#impInfo").textContent = `Done. ${made} created (${pics} with photos), ${skipped} skipped (already in Square). Items without photos stay hidden; add photos from Inventory.`;
+  } catch (e) { $("#impInfo").textContent = "Stopped: " + e.message; $("#impGo").disabled = false; }
+}
+</script></body></html>

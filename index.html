@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heron CA · Vintage. New. Ours. · Venice Beach</title>
+<meta name="description" content="Curated vintage, new with tags finds and our own Coastal Apparel. Shop online or visit our shop on the Venice Beach boardwalk.">
+<link rel="icon" href="/assets/heron-ca.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Jost:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/heron.css"></head>
+<body>
+<main class="wrap">
+  <div class="head"><h1 id="title">New arrivals</h1><span class="small" id="count"></span></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px" id="bands"></div>
+  <div class="grid" id="grid"><p class="empty">Loading the rack…</p></div>
+
+  <section class="frame" id="visit"><div class="visit">
+    <div><div class="caps">Visit the shop</div><h2>On the Venice boardwalk</h2>
+      <p>517 Ocean Front Walk, Unit 6<br>Gingerbread Court, Venice, CA 90291</p>
+      <p>Open every day, 11:00 to 5:30</p>
+      <p class="small">Saw something online? Pay here and pick it up in the shop, or just come by and try it on.</p>
+      <a class="btn alt" style="max-width:260px" target="_blank" rel="noopener" href="https://maps.google.com/?q=517+Ocean+Front+Walk+Venice+CA+90291">Get directions</a></div>
+    <iframe loading="lazy" title="Map" src="https://maps.google.com/maps?q=517%20Ocean%20Front%20Walk%2C%20Venice%2C%20CA%2090291&z=16&output=embed"></iframe>
+  </div></section>
+
+  <section class="story" id="story"><div class="caps">Our story</div><h2>Vintage. New. Ours.</h2>
+    <p>Heron CA is a family shop on the Venice Beach boardwalk. We bring together curated vintage, new with tags finds and our own Coastal Apparel, designed in California.</p>
+    <p>Every piece is cleaned, checked and picked by hand before it reaches the rack. Most are one of one, so when it's gone, it's gone.</p>
+  </section>
+</main>
+<script src="/assets/heron.js"></script>
+<script>
+chrome();
+const q = new URLSearchParams(location.search), cat = q.get("c") || "", band = q.get("p") || "";
+const BANDS = [["", "Any price"], ["u25", "Under $25"], ["25-50", "$25 to $50"], ["50-100", "$50 to $100"], ["100", "$100 and up"]];
+const inBand = (c) => !band || (band === "u25" ? c < 2500 : band === "25-50" ? c >= 2500 && c < 5000 : band === "50-100" ? c >= 5000 && c < 10000 : c >= 10000);
+$("#bands").innerHTML = BANDS.map(([v, l]) => { const p = new URLSearchParams(q); v ? p.set("p", v) : p.delete("p"); return `<a class="chip${v === band ? " on" : ""}" href="?${p}">${l}</a>`; }).join("");
+if (cat) $("#title").textContent = cat;
+shop().then((s) => {
+  const list = s.items.filter((x) => (!cat || x.category === cat) && inBand(x.site_price));
+  $("#count").textContent = `${list.filter((x) => !x.sold).length} pieces · ${s.discount}% less than our other shops`;
+  $("#grid").innerHTML = list.length ? list.map(card).join("") : `<p class="empty">Nothing here right now. New pieces land every week.</p>`;
+}).catch(() => ($("#grid").innerHTML = `<p class="empty">The rack is taking a break. Please try again in a minute.</p>`));
+</script>
+</body></html>

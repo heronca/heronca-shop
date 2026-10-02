@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heron CA</title><link rel="icon" href="/assets/heron-ca.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Jost:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/heron.css"></head>
+<body>
+<main class="wrap"><div class="item" id="item"><p class="empty">Loading…</p></div></main>
+<script src="/assets/heron.js"></script>
+<script>
+chrome();
+const id = new URLSearchParams(location.search).get("id");
+shop().then((s) => {
+  const x = s.items.find((i) => i.id === id);
+  if (!x) { $("#item").innerHTML = `<div><h1 class="serif">This piece has found a home.</h1><a class="btn" style="max-width:260px" href="/">See what's new</a></div>`; return; }
+  document.title = `${x.title} · Heron CA`;
+  $("#item").innerHTML = `
+  <div><div class="gal" id="gal">${x.images.map((u) => `<img src="${u}" alt="${esc(x.title)}">`).join("")}</div>
+    ${x.images.length > 1 ? `<div class="dots" id="dots">${x.images.map((_, i) => `<i class="${i ? "" : "on"}"></i>`).join("")}</div>` : ""}</div>
+  <div class="info"><div class="caps"><a href="/?c=${encodeURIComponent(x.category)}">${esc(x.category)}</a></div>
+    <h1>${esc(x.title)}</h1>
+    <div class="price"><b>${money(x.site_price)}</b><s>${money(x.price)}</s></div>
+    <div class="small">${s.discount}% less than our other shops · ${x.site_price >= s.free_ship ? "Free US shipping" : `US shipping ${money(s.ship_fee)}, free over ${money(s.free_ship)}`}</div>
+    <p><span class="ooo caps">One of one</span>${x.size ? `<span class="caps">Size ${esc(x.size)}</span>` : ""}</p>
+    ${x.sold ? `<div class="stack"><button class="btn red" disabled>Sold</button><a class="btn alt" href="/">See what's new</a></div>` : `
+    <div class="stack"><button class="btn" onclick="checkout(['${x.id}'])">Buy now</button>
+      <button class="btn alt" onclick="bag.add('${x.id}')">Add to bag</button>
+      <button class="btn alt" onclick="checkout(['${x.id}'], true)">Pay now, pick up in store</button></div>`}
+    ${x.description ? `<div class="desc">${esc(x.description)}</div>` : ""}
+    <div class="small">SKU ${esc(x.sku)} · Questions? Visit us at 517 Ocean Front Walk, Venice.</div></div>`;
+  const g = $("#gal"), d = $("#dots");
+  if (d) g.addEventListener("scroll", () => { const i = Math.round(g.scrollLeft / g.clientWidth); [...d.children].forEach((e, k) => e.classList.toggle("on", k === i)); });
+}).catch(() => ($("#item").innerHTML = `<p class="empty">Could not load this piece. Please try again.</p>`));
+</script>
+</body></html>
