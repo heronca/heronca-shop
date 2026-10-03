@@ -41,7 +41,7 @@ textarea{min-height:110px}
 
 <section id="t-inv" hidden><div class="note small">Items without photos are hidden on the site. Add photos to show them.</div>
   <input id="filter" placeholder="Search title or SKU" oninput="drawInv()">
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0"><button class="chip" onclick="selNew()">Select not printed yet</button><button class="chip" onclick="SEL.clear();drawInv()">Clear</button><select id="labelRows" class="chip" style="width:auto"><option value="8">Thin · 2×8 (16 per sheet)</option><option value="7" selected>Thin · 2×7 (14)</option><option value="6">Medium · 2×6 (12)</option><option value="5">Thick · 2×5 (10)</option><option value="4">Thick · 2×4 (8)</option></select><input id="labelStart" type="number" min="1" value="1" class="chip" style="width:70px" title="Start at label # (to use a half-used sheet)"><button class="chip on" onclick="printLabels()">Print labels (<span id="selN">0</span>)</button></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0"><button class="chip" onclick="selNew()">Select not printed yet</button><button class="chip" onclick="SEL.clear();drawInv()">Clear</button><select id="labelRows" class="chip" style="width:auto"><option value="8">Thin · 2×8 (16 per sheet)</option><option value="7" selected>Thin · 2×7 (14)</option><option value="6">Medium · 2×6 (12)</option><option value="5">Thick · 2×5 (10)</option><option value="4">Thick · 2×4 (8)</option></select><input id="labelStart" type="number" min="1" value="1" class="chip" style="width:70px" title="Start at label # (to use a half-used sheet)"><label class="chip" style="margin:0;display:flex;gap:6px;align-items:center;width:auto"><input type="checkbox" id="labelPhoto" style="width:auto;margin:0"> Photo</label><button class="chip on" onclick="printLabels()">Print labels (<span id="selN">0</span>)</button></div>
   <div id="tagEdit" hidden style="border:1px solid #ddd;border-radius:8px;padding:10px;margin:8px 0"></div>
   <div class="small">Prints on a 4x6 in shipping label, 2 columns. Cut along the dotted lines. "Start at" lets you use the rest of a half-used sheet (labels are counted left to right, top to bottom). Print at 4x6 in, scale 100%.</div>
   <div class="inv" id="inv" style="margin-top:12px"></div></section>
@@ -151,12 +151,14 @@ const PRINTED = () => { try { return new Set(JSON.parse(localStorage.getItem("he
 function selNew() { const p = PRINTED(); INV.filter((x) => x.qty > 0 && !p.has(x.id)).forEach((x) => SEL.add(x.id)); drawInv(); }
 // labels on a 4x6 in shipping label sheet: 2 columns, 4 to 8 rows, cut along the dotted lines
 function labelCss(H) { // H = row height in mm, width is always 50.8 mm
-  if (H < 23) return `.t{padding:1mm 1.6mm}.lg,.in{display:none}.nm{font-size:6pt}.mid{margin:.3mm 0}.pr{font-size:13pt}.sz{font-size:8pt}.ft{font-size:5pt;margin-top:.3mm}`;
-  if (H < 28) return `.t{padding:1.5mm 2mm}.lg,.in{display:none}.nm{font-size:7pt}.mid{margin:.5mm 0}.pr{font-size:16pt}.sz{font-size:9.5pt}.ft{font-size:5.5pt;margin-top:.5mm}`;
-  if (H < 34) return `.t{padding:1.4mm 2mm}.lg{display:none}.nm{font-size:7pt}.in{font-size:5.6pt;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mid{margin:.4mm 0}.pr{font-size:15pt}.sz{font-size:9pt}.ft{font-size:5.5pt;margin-top:.4mm}`;
-  return `.t{padding:1.8mm 2.4mm}.lg{display:block;height:3.4mm;width:auto;margin-bottom:.6mm;filter:grayscale(1) contrast(1.4)}.nm{font-size:7pt;white-space:normal;max-height:2.4em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.in{font-size:6pt;line-height:1.25;max-height:2.5em;overflow:hidden}.mid{margin:.5mm 0}.pr{font-size:18pt}.sz{font-size:10pt}.ft{font-size:5.5pt;margin-top:.5mm}`;
+  if (H < 23) return `.t{padding:1mm 1.6mm}.lg,.in{display:none}.nm{font-size:6pt}.mid{margin:.3mm 0}.pr{font-size:13pt}.sz{font-size:8pt}.ft{font-size:5pt;margin-top:.3mm}.ph{width:8.5mm;height:8.5mm}`;
+  if (H < 28) return `.t{padding:1.5mm 2mm}.lg,.in{display:none}.nm{font-size:7pt}.mid{margin:.5mm 0}.pr{font-size:16pt}.sz{font-size:9.5pt}.ft{font-size:5.5pt;margin-top:.5mm}.ph{width:10.5mm;height:10.5mm}`;
+  if (H < 34) return `.t{padding:1.4mm 2mm}.lg{display:none}.nm{font-size:7pt}.in{font-size:5.6pt;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mid{margin:.4mm 0}.pr{font-size:15pt}.sz{font-size:9pt}.ft{font-size:5.5pt;margin-top:.4mm}.ph{width:13mm;height:13mm}`;
+  return `.t{padding:1.8mm 2.4mm}.lg{display:block;height:3.4mm;width:auto;margin-bottom:.6mm;filter:grayscale(1) contrast(1.4)}.nm{font-size:7pt;white-space:normal;max-height:2.4em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.in{font-size:6pt;line-height:1.25;max-height:2.5em;overflow:hidden}.mid{margin:.5mm 0}.pr{font-size:18pt}.sz{font-size:10pt}.ft{font-size:5.5pt;margin-top:.5mm}.ph{width:15mm;height:15mm}.hp .pr{font-size:15pt}.hp .sz{font-size:9pt}`;
 }
 // short product facts for big labels: made in, fabric, model. Picked from the description, editable before printing.
+const TAGPHOTO = () => { try { return JSON.parse(localStorage.getItem("heron-tagphoto") || "{}"); } catch { return {}; } };
+function pickPhoto(id, i, el) { const n = TAGPHOTO(); n[id] = i; try { localStorage.setItem("heron-tagphoto", JSON.stringify(n)); } catch {} el.parentElement.querySelectorAll("img").forEach((im, k) => (im.style.outline = k === i ? "3px solid #000" : "none")); }
 const TAGNOTE = () => { try { return JSON.parse(localStorage.getItem("heron-tagnote") || "{}"); } catch { return {}; } };
 function facts(x) {
   const d = String(x.description || "").replace(/\s+/g, " "), out = [];
@@ -170,9 +172,13 @@ function saveNotes() { const n = TAGNOTE(); document.querySelectorAll("#tagEdit 
 async function printLabels(ready = false) {
   const items = INV.filter((x) => SEL.has(x.id)); if (!items.length) return toast("Select pieces first");
   const rows0 = Number($("#labelRows").value), notes = TAGNOTE();
-  if (rows0 <= 5 && !ready) {
-    $("#tagEdit").innerHTML = `<div class="small" style="margin-bottom:6px"><b>Info line for big labels.</b> Filled from the description when possible. Short is best: country, fabric, model.</div>` +
-      items.map((x) => `<div style="margin:6px 0"><div class="small">${esc(x.title)}</div><input data-id="${x.id}" maxlength="90" value="${esc(notes[x.id] ?? facts(x))}" placeholder="Made in Italy · 100% wool · Model 2019"></div>`).join("") +
+  const withPhoto = $("#labelPhoto").checked; try { localStorage.setItem("heron-label-photo", withPhoto ? "1" : ""); } catch {}
+  if ((rows0 <= 5 || withPhoto) && !ready) {
+    const ph = TAGPHOTO();
+    $("#tagEdit").innerHTML = `<div class="small" style="margin-bottom:6px">${withPhoto ? "<b>Photo:</b> tap the photo to print on each label (the brand tag or the full piece). " : ""}${rows0 <= 5 ? "<b>Info line:</b> filled from the description when possible. Short is best: country, fabric, model." : ""}</div>` +
+      items.map((x) => `<div style="margin:8px 0;padding-bottom:8px;border-bottom:1px solid #eee"><div class="small">${esc(x.title)}</div>
+      ${withPhoto ? `<div style="display:flex;gap:4px;overflow-x:auto;margin:4px 0">${x.images.slice(0, 10).map((u, i) => `<img src="${u}" onclick="pickPhoto('${x.id}',${i},this)" style="width:48px;height:48px;object-fit:cover;border-radius:4px;cursor:pointer;outline:${(ph[x.id] ?? 0) === i ? "3px solid #000" : "none"}">`).join("") || `<span class="small">No photos</span>`}</div>` : ""}
+      ${rows0 <= 5 ? `<input data-id="${x.id}" maxlength="90" value="${esc(notes[x.id] ?? facts(x))}" placeholder="Made in Italy · 100% wool · Model 2019">` : ""}</div>`).join("") +
       `<div style="display:flex;gap:6px;margin-top:8px"><button class="chip on" onclick="saveNotes();printLabels(true)">Print</button><button class="chip" onclick="$('#tagEdit').hidden=true">Cancel</button></div>`;
     $("#tagEdit").hidden = false; return;
   }
@@ -181,11 +187,13 @@ async function printLabels(ready = false) {
   try { localStorage.setItem("heron-label-rows", rows); } catch {}
   if (!window.JsBarcode) await new Promise((ok, no) => { const sc = document.createElement("script"); sc.src = "https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); });
   const bar = (code) => { const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); JsBarcode(svg, code, { format: "CODE128", displayValue: false, margin: 0, height: 40, width: 2 }); svg.setAttribute("preserveAspectRatio", "none"); return svg.outerHTML; };
-  const tag = (x) => !x ? `<div class="t"></div>` : `<div class="t"><img class="lg" src="${location.origin}/assets/heron-logo.png"><div class="nm">${esc(x.title)}</div>
-    ${(TAGNOTE()[x.id] ?? "") ? `<div class="in">${esc(TAGNOTE()[x.id])}</div>` : ""}
-    <div class="mid"><div class="pr">${money(x.price)}</div><div class="sz">${x.size ? "SIZE " + esc(x.size) : ""}</div></div>
+  const PH = TAGPHOTO(), NT = TAGNOTE();
+  const tag = (x) => { if (!x) return `<div class="t"></div>`; const img = withPhoto && x.images.length ? x.images[Math.min(PH[x.id] ?? 0, x.images.length - 1)] : "";
+    return `<div class="t${img ? " hp" : ""}"><div class="top"><div class="tx"><img class="lg" src="${location.origin}/assets/heron-logo.png"><div class="nm">${esc(x.title)}</div>
+    ${rows <= 5 && NT[x.id] ? `<div class="in">${esc(NT[x.id])}</div>` : ""}
+    <div class="mid"><div class="pr">${money(x.price)}</div><div class="sz">${x.size ? "SIZE " + esc(x.size) : ""}</div></div></div>${img ? `<img class="ph" src="${img}">` : ""}</div>
     ${x.sku ? `<div class="bc">${bar(x.sku)}</div>` : `<div class="bc"></div>`}
-    <div class="ft"><span>${esc(x.sku)}</span><span>ALL SALES FINAL</span></div></div>`;
+    <div class="ft"><span>${esc(x.sku)}</span><span>ALL SALES FINAL</span></div></div>`; };
   const cells = [...Array(start).fill(null), ...items], pages = [];
   for (let i = 0; i < cells.length; i += per) pages.push(`<div class="pg">${cells.slice(i, i + per).map(tag).join("")}</div>`);
   const w = window.open("", "_blank"); if (!w) return toast("Allow pop-ups to print");
@@ -194,8 +202,9 @@ async function printLabels(ready = false) {
   .pg{width:4in;height:6in;display:grid;grid-template-columns:50.8mm 50.8mm;grid-template-rows:repeat(${rows},${H.toFixed(2)}mm);overflow:hidden;page-break-after:always;break-after:page}
   .pg:last-child{page-break-after:auto;break-after:auto}
   .t{display:flex;flex-direction:column;overflow:hidden;border-right:.3pt dotted #000;border-bottom:.3pt dotted #000}.t:nth-child(2n){border-right:0}
+  .top{display:flex;gap:1.2mm;align-items:flex-start}.tx{flex:1;min-width:0}.ph{object-fit:cover;flex:none;filter:grayscale(1) contrast(1.25) brightness(1.05);border-radius:.6mm}
   .lg{align-self:flex-start}.nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
-  .mid{display:flex;justify-content:space-between;align-items:baseline}.pr{font-weight:700;line-height:1}.sz{font-weight:700;letter-spacing:.04em}
+  .mid{display:flex;justify-content:space-between;align-items:baseline}.pr{font-weight:700;line-height:1}.sz{font-weight:700;letter-spacing:.04em;white-space:nowrap}.mid{gap:1.5mm}
   .bc{flex:1;min-height:0}.bc svg{width:100%;height:100%;display:block}.ft{display:flex;justify-content:space-between;letter-spacing:.05em;line-height:1}
   ${labelCss(H)}
   @media screen{body{background:#eee;padding:10px}.pg{background:#fff;margin:0 auto 10px}}</style></head><body>${pages.join("")}<script>onload=()=>setTimeout(()=>print(),400)<\/script></body></html>`);
