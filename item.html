@@ -26,6 +26,8 @@ shop().then((s) => {
     <div class="stack"><button class="btn" onclick="checkout(['${x.id}'])">Buy now</button>
       <button class="btn alt" onclick="bag.add('${x.id}')">Add to bag</button>
       <button class="btn alt" onclick="checkout(['${x.id}'], true)">Pay now, pick up in store</button></div>`}
+    <div class="multi"><b>Buy more, save more.</b> 2nd piece 15% off, 3rd 20%, 4th 25%, 5th and up 30%. Applied in your bag.</div>
+    <div class="small" style="margin-top:10px">All sales are final. Returns only if a piece arrives not as described. <a href="/about.html#returns">Details</a></div>
     ${x.description ? `<div class="desc">${esc(x.description)}</div>` : ""}
     <div class="small">SKU ${esc(x.sku)} · Questions? Visit us at 517 Ocean Front Walk, Venice.</div></div>`;
   const g = $("#gal"), d = $("#dots");
