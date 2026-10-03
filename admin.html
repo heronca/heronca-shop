@@ -51,6 +51,8 @@ textarea{min-height:110px}
   <div style="display:grid;gap:8px;margin-bottom:24px"><button class="btn alt" onclick="savePhotos()">1. Save photo backup</button><button class="btn alt" onclick="restorePhotos()">2. Restore photos from backup</button><div id="bkInfo" class="small"></div></div>
   <div class="note small"><b>Sold somewhere else?</b> Pick a Flyp sales report (xlsx or csv). Every piece in it is marked sold here and disappears from the site. In-store Square sales drop off by themselves.</div>
   <input id="sales" type="file" accept=".xlsx,.csv"><div id="salesInfo" class="small" style="margin:10px 0 24px"></div>
+  <div class="note small"><b>Consignment (50% to the owner)</b><br>Pick the eBay CSV below first, then mark every piece listed on a date as consignment. Their SKU changes from HC-V to HC-K. Reprint their labels after.</div>
+  <div style="display:flex;gap:8px;margin-bottom:24px"><input id="conDate" value="Sep-30-26" style="max-width:140px"><button class="btn alt" style="width:auto" onclick="consignByDate()">Mark as consignment</button></div>
   <div class="note small">Pick the eBay "Active listings" CSV. Each listing becomes a Square item with stock 1, its own SKU and the photos from that eBay listing. Titles already in Square are skipped, so it is safe to run again.</div>
   <input id="csv" type="file" accept=".csv"><div id="impInfo" class="small" style="margin:10px 0"></div>
   <button class="btn" id="impGo" disabled onclick="runImport()">Import</button>
@@ -100,7 +102,7 @@ function drawInv() {
   const f = $("#filter").value.toLowerCase();
   $("#inv").innerHTML = INV.filter((x) => !f || (x.title + x.sku).toLowerCase().includes(f)).map((x) => `<div class="row">
     <label style="margin:0;display:flex;gap:8px;align-items:center"><input type="checkbox" style="width:auto" ${SEL.has(x.id) ? "checked" : ""} onchange="this.checked ? SEL.add('${x.id}') : SEL.delete('${x.id}'); $('#selN').textContent = SEL.size">${x.images[0] ? `<img src="${x.images[0]}">` : `<div class="noimg"></div>`}</label>
-    <div>${esc(x.title)}<div class="small">${esc(x.sku)} · ${money(x.price)} · ${x.qty > 0 ? "in stock" : "sold"} · ${x.images.length} photos${PRINTED().has(x.id) ? " · label printed" : ""}</div></div>
+    <div>${esc(x.title)}<div class="small">${esc(x.sku)} · ${money(x.price)} · ${x.qty > 0 ? "in stock" : "sold"} · ${x.images.length} photos${/^HC-K-/.test(x.sku) ? " · <b>consignment</b>" : ""}${PRINTED().has(x.id) ? " · label printed" : ""}</div></div>
     <div style="display:grid;gap:6px">${x.qty > 0 ? `<button class="chip" onclick="markSold(['${x.id}'])">Sold</button>` : ""}<label class="chip" style="margin:0">+ Photos<input type="file" accept="image/*" multiple hidden onchange="addPhotos('${x.item_id}','${esc(x.sku)}',this)"></label></div></div>`).join("");
   $("#selN").textContent = SEL.size;
 }
@@ -123,12 +125,12 @@ async function printLabels() {
   @page{size:4in 6in;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Helvetica,Arial,sans-serif;color:#000}
   .pg{width:4in;height:6in;display:grid;grid-template-columns:2in 2in;grid-template-rows:repeat(3,2in);page-break-after:always}
   .t{padding:.1in .11in;display:flex;flex-direction:column;border:.5px dashed #bbb}
-  .lg{height:.17in;width:auto;align-self:flex-start;filter:grayscale(1) contrast(1.4)}
-  .nm{font-size:7pt;line-height:1.15;margin:.04in 0;height:.24in;overflow:hidden}
+  .lg{height:.2in;width:auto;align-self:flex-start;filter:grayscale(1) contrast(1.4)}
+  .nm{font-size:9pt;line-height:1.15;margin:.04in 0;height:.3in;overflow:hidden;font-weight:600}
   .mid{display:flex;justify-content:space-between;align-items:center;flex:1}
-  .pr{font-size:20pt;font-weight:700;line-height:1}.sz{font-size:8pt;margin-top:.04in;letter-spacing:.05em}
-  .qr{width:.66in;height:.66in}.bc{height:${$("#withQr").checked ? ".3in" : ".5in"};margin:.04in 0}.bc svg{width:100%;height:100%;display:block}.qr svg{width:100%;height:100%}
-  .ft{display:flex;justify-content:space-between;font-size:5.5pt;letter-spacing:.06em;border-top:.6px solid #000;padding-top:.03in}
+  .pr{font-size:28pt;font-weight:700;line-height:1}.sz{font-size:11pt;font-weight:600;margin-top:.04in;letter-spacing:.05em}
+  .qr{width:.66in;height:.66in}.bc{height:${$("#withQr").checked ? ".28in" : ".42in"};margin:.03in 0}.bc svg{width:100%;height:100%;display:block}.qr svg{width:100%;height:100%}
+  .ft{display:flex;justify-content:space-between;font-size:7pt;letter-spacing:.06em;border-top:.6px solid #000;padding-top:.03in}
   @media print{.t{border:0}}</style></head><body>${pages.join("")}<script>onload=()=>setTimeout(()=>print(),400)<\/script></body></html>`);
   w.document.close();
   const p = PRINTED(); items.forEach((x) => p.add(x.id)); try { localStorage.setItem("heron-printed", JSON.stringify([...p])); } catch {}
@@ -152,7 +154,7 @@ $("#csv").onchange = async (e) => {
   ROWS = rest.filter((r) => r[k("Title")] && +r[k("Available quantity")] > 0).map((r) => ({
     title: r[k("Title")].trim(), price: +(r[k("Current price")] || r[k("Start price")]),
     category: MAP[r[k("eBay category 1 name")]] || "Tops", description: `Condition: ${r[k("Condition")]}`,
-    sku: (r[k("Custom label (SKU)")] || "").trim() || undefined, ebay: r[k("Item number")] }));
+    sku: (r[k("Custom label (SKU)")] || "").trim() || undefined, ebay: r[k("Item number")], start: r[k("Start date")] || "" }));
   $("#impInfo").textContent = `${ROWS.length} listings ready. Photos are copied from each eBay listing. This takes a few minutes.`;
   $("#impGo").disabled = $("#picGo").disabled = !ROWS.length;
 };
@@ -198,6 +200,14 @@ async function aerialRender() {
   if (!HERON.aerialKey) return toast("Add the Aerial View key in heron.js first");
   const r = await fetch(`https://aerialview.googleapis.com/v1/videos:renderVideo?key=${HERON.aerialKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ address: HERON.address }) });
   const j = await r.json(); toast(j.state ? `Google says: ${j.state}` : (j.error?.message || "Request failed"));
+}
+async function consignByDate() {
+  const d = $("#conDate").value.trim(); if (!ROWS.length) return toast("Pick the eBay CSV first");
+  const titles = new Set(ROWS.filter((r) => r.start.startsWith(d)).map((r) => r.title.trim().toLowerCase()));
+  const inv = (await A("admin_list")).items.filter((x) => titles.has(x.title.trim().toLowerCase()));
+  if (!inv.length) return toast(`No pieces found for ${d}`);
+  if (!confirm(`Mark ${inv.length} pieces listed on ${d} as consignment?\n\n${inv.map((x) => x.title).slice(0, 15).join("\n")}${inv.length > 15 ? "\n…" : ""}`)) return;
+  try { const r = await A("admin_consign", { ids: inv.map((x) => x.id) }); toast(`${r.changed} pieces are now HC-K`); } catch (e) { toast(e.message); }
 }
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 async function runPhotos() {
