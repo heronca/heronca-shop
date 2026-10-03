@@ -47,15 +47,16 @@ async function renderBag() {
   const s = await shop();
   const items = bag.get().map((id) => s.items.find((x) => x.id === id && !x.sold)).filter(Boolean);
   if (items.length !== bag.get().length) bag.set(items.map((x) => x.id));
-  const tier = (i) => Math.max(s.discount, s.bundle[Math.min(i, s.bundle.length - 1)]);
+  const tier = (i) => s.bundle[Math.min(i, s.bundle.length - 1)];
   const sorted = [...items].sort((a, b) => b.price - a.price);
-  const line = (x) => { const i = sorted.indexOf(x), p = tier(i); return { p, cost: Math.round(x.price * (100 - p) / 100) }; };
-  rows.innerHTML = items.length ? items.map((x) => { const l = line(x); return `<div class="row"><img src="${x.images[0]}" alt=""><div>${esc(x.title)}<div class="small">${esc(x.size)}${x.size ? " · " : ""}${l.p}% off</div></div><div style="text-align:right"><b>${money(l.cost)}</b><br><s class="small">${money(x.price)}</s><br><button onclick="bag.remove('${x.id}')">Remove</button></div></div>`; }).join("") : `<p class="small">Your bag is empty.</p>`;
+  const line = (x) => { const i = sorted.indexOf(x), p = tier(i); return { p, cost: Math.round(x.site_price * (100 - p) / 100) }; };
+  rows.innerHTML = items.length ? items.map((x) => { const l = line(x); return `<div class="row"><img src="${x.images[0]}" alt=""><div>${esc(x.title)}<div class="small">${esc(x.size)}${x.size ? " · " : ""}${l.p ? l.p + "% multi-buy" : "10% off online"}</div></div><div style="text-align:right"><b>${money(l.cost)}</b><br><s class="small">${money(x.price)}</s><br><button onclick="bag.remove('${x.id}')">Remove</button></div></div>`; }).join("") : `<p class="small">Your bag is empty.</p>`;
   const sub = items.reduce((a, x) => a + line(x).cost, 0), full = items.reduce((a, x) => a + x.price, 0);
   const ship = !items.length || sub >= s.free_ship ? 0 : s.ship_fee;
   const next = tier(items.length);
   $("#bagSum").innerHTML = `${items.length ? `<div class="nudge">Add one more piece and get <b>${next}% off</b> it</div>` : ""}<div><span>You save</span><span>${money(full - sub)}</span></div><div><span>Subtotal</span><span>${money(sub)}</span></div><div><span>US shipping</span><span>${ship ? money(ship) : "Free"}</span></div><div class="small">${sub < s.free_ship ? `Add ${money(s.free_ship - sub)} more for free US shipping` : "You get free US shipping"}</div>`;
   $("#bagGo").disabled = $("#bagPick").disabled = !items.length;
+  $("#offerBox").hidden = items.length < 2;
 }
 
 async function checkout(ids, pickup = false) {
@@ -79,7 +80,10 @@ function chrome() {
   <div class="head" style="margin:0"><h2>Your bag</h2><button class="chip" onclick="closeBag()">Close</button></div>
   <div class="rows" id="bagRows"></div><div class="sum" id="bagSum"></div>
   <button class="btn" id="bagGo" onclick="checkout(bag.get())">Checkout</button>
-  <button class="btn alt" id="bagPick" onclick="checkout(bag.get(), true)">Pay now, pick up in store</button></div></div>
+  <button class="btn alt" id="bagPick" onclick="checkout(bag.get(), true)">Pay now, pick up in store</button>
+  <div id="offerBox" hidden style="border-top:1px solid var(--line);padding-top:12px"><div class="small" style="margin-bottom:6px"><b>Buying a few pieces?</b> Make an offer, or leave the price empty and ask us for our best bundle price. We reply by email.</div>
+  <div style="display:grid;grid-template-columns:110px 1fr;gap:6px"><input id="offAmt" type="number" inputmode="decimal" placeholder="Your offer $" class="chip" style="border-radius:8px"><input id="offMail" type="email" placeholder="Email" class="chip" style="border-radius:8px"></div>
+  <button class="btn alt" style="margin-top:6px" onclick="sendOffer()">Send offer / ask for a price</button></div></div></div>
   <div class="toast" id="toast"></div>`);
   const here = new URLSearchParams(location.search).get("c") || "";
   $("#cats").innerHTML = [["", "All"], ...HERON.categories.map((c) => [c, c])].map(([v, l]) => `<a class="${v === here && location.pathname.length <= 11 ? " on" : ""}" href="/${v ? "?c=" + encodeURIComponent(v) : ""}">${l}</a>`).join("");
@@ -88,6 +92,10 @@ function chrome() {
   if (tr) { let x = 0, last = 0, paused = false; tr.parentElement.onmouseenter = () => paused = true; tr.parentElement.onmouseleave = () => paused = false;
     const step = (t) => { if (last && !paused) { x -= (t - last) * 0.04; const half = tr.scrollWidth / 2; if (-x >= half) x += half; tr.style.transform = `translateX(${x}px)`; } last = t; requestAnimationFrame(step); };
     requestAnimationFrame(step); }
+}
+async function sendOffer() {
+  try { await api("offer", { ids: bag.get(), amount: $("#offAmt").value, email: $("#offMail").value }); toast("Thanks! We'll email you soon."); $("#offAmt").value = ""; }
+  catch (e) { toast(e.message); }
 }
 function openBag() { $("#drawer").classList.add("open"); renderBag(); }
 function closeBag() { $("#drawer").classList.remove("open"); }
@@ -108,4 +116,10 @@ async function aerial() {
     box.hidden = false;
   } catch {}
 }
-document.addEventListener("DOMContentLoaded", aerial);
+document.addEventListener("DOMContentLoaded", () => {
+  const box = document.getElementById("aerial"); if (!box || !HERON.aerialKey) return;
+  // only ask Google when the visitor scrolls near it (keeps us inside the free monthly limit)
+  box.hidden = false; box.style.minHeight = "1px";
+  const io = new IntersectionObserver((e) => { if (e[0].isIntersecting) { io.disconnect(); box.hidden = true; box.style.minHeight = ""; aerial(); } }, { rootMargin: "300px" });
+  io.observe(box);
+});
