@@ -7,8 +7,8 @@ const HERON = {
     ["eBay", "https://www.ebay.com/usr/heronca", "ebay.com"],
     ["Poshmark", "https://poshmark.com/closet/heronca", "poshmark.com"],
     ["Vinted", "https://www.vinted.com/member/3172628125-heronca1", "vinted.com"],
-    ["Mercari", "", "mercari.com"],
-    ["Depop", "", "depop.com"],
+    ["Mercari", "https://www.mercari.com/u/heronca/", "mercari.com"],
+    ["Depop", "https://www.depop.com/heronca/", "depop.com"],
     ["Etsy", "", "etsy.com"],
     ["Facebook", "", "facebook.com"],
   ],
@@ -72,7 +72,7 @@ function chrome() {
   document.body.insertAdjacentHTML("beforeend", `
   <footer><div class="wrap"><img class="logo-f" src="/assets/heron-footer.png" alt="Heron CA"><div class="caps">Vintage. New. Ours.</div>
   <div class="small">Also find us on</div><div class="links">${HERON.links.filter((l) => l[1]).map(([n, u, d]) => `<a class="plat" href="${u}" target="_blank" rel="noopener"><img src="https://www.google.com/s2/favicons?domain=${d}&sz=64" alt="" width="20" height="20">${n}</a>`).join("")}</div>
-  <div class="small"><a href="/about.html">About</a> · <a href="/about.html#returns">Returns</a> · <a href="/about.html#visit">Visit</a><br>517 Ocean Front Walk, Unit 6, Venice, CA 90291 · Open daily 11:00 to 5:30<br><a href="tel:+13235776677">(323) 577-6677</a> · <a href="mailto:info@heronca.com">info@heronca.com</a></div></div></footer>
+  <div class="small"><a href="/about.html">About</a> · <a href="/about.html#returns">Returns</a> · <a href="/about.html#visit">Visit</a><br>517 Ocean Front Walk, Unit 6, Venice, CA 90291 · Open daily 11:00 to 5:30<br><a href="mailto:info@heronca.com">info@heronca.com</a></div></div></footer>
   <div class="drawer" id="drawer"><div class="shade" onclick="closeBag()"></div><div class="panel">
   <div class="head" style="margin:0"><h2>Your bag</h2><button class="chip" onclick="closeBag()">Close</button></div>
   <div class="rows" id="bagRows"></div><div class="sum" id="bagSum"></div>
@@ -82,6 +82,10 @@ function chrome() {
   const here = new URLSearchParams(location.search).get("c") || "";
   $("#cats").innerHTML = [["", "All"], ...HERON.categories.map((c) => [c, c])].map(([v, l]) => `<a class="${v === here && location.pathname.length <= 11 ? " on" : ""}" href="/${v ? "?c=" + encodeURIComponent(v) : ""}">${l}</a>`).join("");
   renderBag();
+  const tr = $(".marquee .track");
+  if (tr) { let x = 0, last = 0, paused = false; tr.parentElement.onmouseenter = () => paused = true; tr.parentElement.onmouseleave = () => paused = false;
+    const step = (t) => { if (last && !paused) { x -= (t - last) * 0.04; const half = tr.scrollWidth / 2; if (-x >= half) x += half; tr.style.transform = `translateX(${x}px)`; } last = t; requestAnimationFrame(step); };
+    requestAnimationFrame(step); }
 }
 function openBag() { $("#drawer").classList.add("open"); renderBag(); }
 function closeBag() { $("#drawer").classList.remove("open"); }

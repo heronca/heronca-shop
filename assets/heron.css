@@ -60,7 +60,7 @@ nav.cats a.on,nav.cats a:hover{color:var(--ink);border-bottom-color:var(--ink)}
 .story{max-width:620px;margin:0 auto 72px;text-align:center}
 .story p{font-size:16px;color:var(--muted)}
 footer{background:var(--ink);color:#fff;padding:48px 0 40px;text-align:center}
-footer .logo-f{height:34px;width:auto;margin:0 auto 14px;filter:invert(1)}
+footer .logo-f{height:34px;width:auto;margin:0 auto 14px}
 footer .links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 22px;margin:14px 0}
 footer .links a{text-decoration:none;opacity:.9}
 footer .links a:hover{opacity:1;text-decoration:underline}
@@ -108,14 +108,13 @@ footer .small{color:rgba(255,255,255,.6)}
 .menu a{text-decoration:none;color:var(--muted)}.menu a:hover{color:var(--ink)}
 @media(max-width:560px){.menu{gap:12px;font-size:13px}.menu a:last-child{display:none}.right{gap:12px}}
 .marquee{overflow:hidden;background:var(--ink);color:#fff;border-bottom:1px solid var(--line)}
-.marquee .track{display:flex;width:max-content;animation:heron-slide 45s linear infinite}
-.marquee:hover .track{animation-play-state:paused}
+.marquee .track{display:flex;width:max-content;will-change:transform}
 .marquee a{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;text-decoration:none;font-size:13.5px;white-space:nowrap}
 .marquee a:hover{text-decoration:underline}
 .marquee img{border-radius:4px;background:#fff}
 .marquee .dot{opacity:.4;align-self:center;font-size:11px}
 @keyframes heron-slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-@media(prefers-reduced-motion:reduce){.marquee .track{animation:none}}
+
 .about h1{font-family:'Cormorant Garamond',Georgia,serif;font-weight:400;font-size:clamp(40px,6vw,72px);line-height:1;margin:10px 0 18px}
 .about .lead{font-size:18px;max-width:640px;color:var(--muted)}
 .about section{padding:48px 0;border-top:1px solid var(--line)}

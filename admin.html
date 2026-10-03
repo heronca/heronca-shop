@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex"><title>Heron Admin</title><link rel="icon" href="/assets/heron-ca.png">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&family=Jost:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/heron.css?v=7">
+<link rel="stylesheet" href="/assets/heron.css?v=8">
 <style>
 .tabs{display:flex;gap:6px;margin:18px 0}
 label{display:block;margin:12px 0 4px}
@@ -51,7 +51,7 @@ textarea{min-height:110px}
 </div>
 <div class="toast" id="toast"></div>
 </main>
-<script src="/assets/heron.js?v=7"></script>
+<script src="/assets/heron.js?v=8"></script>
 <script>
 let PW = sessionStorage.getItem("heron-pw") || "", PHOTOS = [], INV = [], ROWS = [];
 const A = (action, data) => api(action, data, { "x-admin-password": PW });
