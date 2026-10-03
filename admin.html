@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex"><title>Heron Admin</title><link rel="icon" href="/assets/heron-ca.png">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&family=Jost:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/heron.css?v=10">
+<link rel="stylesheet" href="/assets/heron.css?v=13">
 <style>
 .tabs{display:flex;gap:6px;margin:18px 0}
 label{display:block;margin:12px 0 4px}
@@ -21,7 +21,7 @@ textarea{min-height:110px}
 <button class="btn" style="margin-top:12px" onclick="login()">Enter</button></div>
 
 <div id="app" hidden>
-<div class="tabs"><button class="chip on" data-t="add">Add item</button><button class="chip" data-t="inv">Inventory</button><button class="chip" data-t="imp">Import eBay</button><button class="chip" data-t="pub">Publish</button><button class="chip" data-t="off">Offers</button><button class="chip" data-t="cat">Catalog</button></div>
+<div class="tabs"><button class="chip on" data-t="add">Add item</button><button class="chip" data-t="inv">Inventory</button><button class="chip" data-t="imp">Import eBay</button><button class="chip" data-t="pub">Publish</button><button class="chip" data-t="off">Offers</button><button class="chip" data-t="cat">Catalog</button><button class="chip" data-t="rec">Receipts</button></div>
 
 <section id="t-add">
   <label>Photos (first one is the cover)</label><input id="photos" type="file" accept="image/*" multiple>
@@ -41,8 +41,8 @@ textarea{min-height:110px}
 
 <section id="t-inv" hidden><div class="note small">Items without photos are hidden on the site. Add photos to show them.</div>
   <input id="filter" placeholder="Search title or SKU" oninput="drawInv()">
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0"><button class="chip" onclick="selNew()">Select not printed yet</button><button class="chip" onclick="SEL.clear();drawInv()">Clear</button><button class="chip on" onclick="printLabels()">Print labels (<span id="selN">0</span>)</button></div>
-  <div class="small">Labels: 4x6 in thermal sheet, 6 tags of 2x2 in. Each tag has the price, size and a barcode the Square app scans.</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0"><button class="chip" onclick="selNew()">Select not printed yet</button><button class="chip" onclick="SEL.clear();drawInv()">Clear</button><select id="labelRows" class="chip" style="width:auto"><option value="8">Thin · 2×8 (16 per sheet)</option><option value="7" selected>Thin · 2×7 (14)</option><option value="6">Medium · 2×6 (12)</option><option value="5">Thick · 2×5 (10)</option><option value="4">Thick · 2×4 (8)</option></select><input id="labelStart" type="number" min="1" value="1" class="chip" style="width:70px" title="Start at label # (to use a half-used sheet)"><button class="chip on" onclick="printLabels()">Print labels (<span id="selN">0</span>)</button></div>
+  <div class="small">Prints on a 4x6 in shipping label, 2 columns. Cut along the dotted lines. "Start at" lets you use the rest of a half-used sheet (labels are counted left to right, top to bottom). Print at 4x6 in, scale 100%.</div>
   <div class="inv" id="inv" style="margin-top:12px"></div></section>
 
 <section id="t-pub" hidden>
@@ -52,6 +52,16 @@ textarea{min-height:110px}
   <span class="small">or</span><input id="pubPer" type="number" value="1" min="1" style="width:60px" class="chip"><span class="small">per day from</span><input id="pubStart" type="date" class="chip" style="width:auto"><button class="chip on" onclick="pubSet('daily')">Schedule</button></div>
   <div class="inv" id="pubList"></div></section>
 <section id="t-off" hidden><div class="note small">Bundle offers and price requests from the bag. Accept to create a payment link, then email it to the customer.</div><div id="offList" class="inv"></div></section>
+<section id="t-rec" hidden>
+  <div class="note small"><b>Cash sale / manual receipt.</b> Scan a barcode (or type a SKU) and press Enter, or add a line by hand. "Mark sold" takes the pieces off the site and stock. Every receipt you print is kept as a copy (outside Square) and listed below.</div>
+  <input id="recScan" placeholder="Scan barcode or type SKU, then Enter">
+  <div style="display:grid;grid-template-columns:1fr 100px auto;gap:6px;margin-top:6px"><input id="recName" placeholder="Manual line, e.g. Shipping"><input id="recPrice" type="number" step="0.01" placeholder="$"><button class="chip" onclick="recAddManual()">Add</button></div>
+  <div id="recLines" class="inv" style="margin:10px 0"></div>
+  <div style="display:flex;gap:6px;align-items:center"><select id="recMethod" style="width:auto"><option>Cash</option><option>Card (POS)</option><option>Other</option></select><input id="recNote" placeholder="Note (optional)"></div>
+  <div style="display:grid;gap:8px;margin-top:8px"><button class="btn" onclick="recSave(true)">Mark sold + print receipt</button><button class="btn alt" onclick="recSave(false)">Print receipt only (sale already in Square)</button></div>
+  <h3 class="serif" style="margin:28px 0 6px">Recent Square payments</h3><div id="recSq" class="inv"></div>
+  <h3 class="serif" style="margin:28px 0 6px">Printed receipts</h3><button class="chip" onclick="recCsv()">Download CSV</button><div id="recCash" class="inv" style="margin-top:8px"></div>
+</section>
 <section id="t-cat" hidden>
   <div class="note small"><b>Store catalog</b>: small things sold in the shop only (jewelry, towels, scarves…). One barcode per line, scan it from the printed A4 sheet at the register. Not shown on the website, stock not counted. One line each: <i>Name | price | CODE</i>. Leave the price empty to type the price at the register.</div>
   <textarea id="gen" style="min-height:300px;font-family:monospace;font-size:13px">2 Rings | 5 | RING2
@@ -73,8 +83,6 @@ $15 Rack Item | 15 | RACK15</textarea>
   <div style="display:grid;gap:8px;margin-top:10px"><button class="btn" onclick="genCreate()">1. Create in Square</button><button class="btn alt" onclick="genPrint()">2. Print A4 barcode sheet</button><div id="genInfo" class="small"></div></div>
 </section>
 <section id="t-imp" hidden>
-  <div class="note small"><b>One time: switch to store prices.</b> The pieces imported from eBay still carry eBay prices. This divides them by 1.30 (store price = eBay price minus the 30% marketplace markup), rounded to whole dollars. Store-only HC-G items are not touched.</div>
-  <button class="btn alt" style="margin-bottom:24px" onclick="repriceAll()">Convert eBay prices to store prices</button>
   <div class="note small"><b>Aerial video</b> (one time): asks Google to make the flyover video of the shop. It can take a few hours; the site shows it by itself when ready.</div>
   <button class="btn alt" style="margin-bottom:24px" onclick="aerialRender()">Request aerial video</button>
   <div class="note small"><b>Moving to real Square</b><br>Step 1, while still in test mode: save the photos. Step 2, after switching to real Square and importing: put them back.</div>
@@ -91,15 +99,15 @@ $15 Rack Item | 15 | RACK15</textarea>
 </div>
 <div class="toast" id="toast"></div>
 </main>
-<script src="/assets/heron.js?v=10"></script>
+<script src="/assets/heron.js?v=13"></script>
 <script>
 let PW = sessionStorage.getItem("heron-pw") || "", PHOTOS = [], INV = [], ROWS = [];
 const A = (action, data) => api(action, data, { "x-admin-password": PW });
 $("#category").innerHTML = HERON.categories.map((c) => `<option>${c}</option>`).join("");
 document.querySelectorAll(".tabs .chip").forEach((b) => b.onclick = () => {
   document.querySelectorAll(".tabs .chip").forEach((x) => x.classList.toggle("on", x === b));
-  ["add", "inv", "imp", "cat", "pub", "off"].forEach((t) => $("#t-" + t).hidden = t !== b.dataset.t);
-  if (b.dataset.t === "pub") loadPub(); if (b.dataset.t === "off") loadOff();
+  ["add", "inv", "imp", "cat", "pub", "off", "rec"].forEach((t) => $("#t-" + t).hidden = t !== b.dataset.t);
+  if (b.dataset.t === "rec") loadRec(); if (b.dataset.t === "pub") loadPub(); if (b.dataset.t === "off") loadOff();
   if (b.dataset.t === "inv") loadInv();
 });
 async function login() { PW = $("#pw").value || PW; try { await A("admin_list"); sessionStorage.setItem("heron-pw", PW); $("#login").hidden = true; $("#app").hidden = false; } catch (e) { toast(e.message); } }
@@ -134,35 +142,41 @@ function drawInv() {
   $("#inv").innerHTML = INV.filter((x) => !f || (x.title + x.sku).toLowerCase().includes(f)).map((x) => `<div class="row">
     <label style="margin:0;display:flex;gap:8px;align-items:center"><input type="checkbox" style="width:auto" ${SEL.has(x.id) ? "checked" : ""} onchange="this.checked ? SEL.add('${x.id}') : SEL.delete('${x.id}'); $('#selN').textContent = SEL.size">${x.images[0] ? `<img src="${x.images[0]}">` : `<div class="noimg"></div>`}</label>
     <div>${esc(x.title)}<div class="small">${esc(x.sku)} · ${money(x.price)} · ${x.qty > 0 ? "in stock" : "sold"} · ${x.images.length} photos${/^HC-K-/.test(x.sku) ? " · <b>consignment</b>" : ""}${PRINTED().has(x.id) ? " · label printed" : ""}</div></div>
-    <div style="display:grid;gap:6px">${x.qty > 0 ? `<button class="chip" onclick="markSold(['${x.id}'])">Sold</button>` : ""}<label class="chip" style="margin:0">+ Photos<input type="file" accept="image/*" multiple hidden onchange="addPhotos('${x.item_id}','${esc(x.sku)}',this)"></label></div></div>`).join("");
+    <div style="display:grid;gap:6px">${x.qty > 0 ? `<button class="chip" onclick="markSold(['${x.id}'])">Sold</button><button class="chip" onclick="forFlyp('${x.id}')">Flyp</button>` : ""}<label class="chip" style="margin:0">+ Photos<input type="file" accept="image/*" multiple hidden onchange="addPhotos('${x.item_id}','${esc(x.sku)}',this)"></label></div></div>`).join("");
   $("#selN").textContent = SEL.size;
 }
 const SEL = new Set();
 const PRINTED = () => { try { return new Set(JSON.parse(localStorage.getItem("heron-printed") || "[]")); } catch { return new Set(); } };
 function selNew() { const p = PRINTED(); INV.filter((x) => x.qty > 0 && !p.has(x.id)).forEach((x) => SEL.add(x.id)); drawInv(); }
+// labels on a 4x6 in shipping label sheet: 2 columns, 4 to 8 rows, cut along the dotted lines
+function labelCss(H) { // H = row height in mm, width is always 50.8 mm
+  if (H < 23) return `.t{padding:1mm 1.6mm}.lg{display:none}.nm{font-size:6pt}.mid{margin:.3mm 0}.pr{font-size:13pt}.sz{font-size:8pt}.ft{font-size:5pt;margin-top:.3mm}`;
+  if (H < 34) return `.t{padding:1.5mm 2mm}.lg{display:none}.nm{font-size:7pt}.mid{margin:.5mm 0}.pr{font-size:${H < 28 ? 16 : 19}pt}.sz{font-size:9.5pt}.ft{font-size:5.5pt;margin-top:.5mm}`;
+  return `.t{padding:2mm 2.4mm}.lg{display:block;height:3.6mm;width:auto;margin-bottom:.8mm;filter:grayscale(1) contrast(1.4)}.nm{font-size:7.5pt}.mid{margin:.8mm 0}.pr{font-size:24pt}.sz{font-size:11pt}.ft{font-size:6pt;margin-top:.6mm}`;
+}
 async function printLabels() {
   const items = INV.filter((x) => SEL.has(x.id)); if (!items.length) return toast("Select pieces first");
-  if (!window.qrcode) await new Promise((ok, no) => { const sc = document.createElement("script"); sc.src = "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); });
+  const rows = Number($("#labelRows").value), start = Math.max(1, Number($("#labelStart").value) || 1) - 1, H = 152.4 / rows, per = rows * 2;
+  try { localStorage.setItem("heron-label-rows", rows); } catch {}
   if (!window.JsBarcode) await new Promise((ok, no) => { const sc = document.createElement("script"); sc.src = "https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); });
-  const bar = (code) => { const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); JsBarcode(svg, code, { format: "CODE128", displayValue: false, margin: 0, height: 40, width: 1.4 }); svg.setAttribute("preserveAspectRatio", "none"); return svg.outerHTML; };
-  const qr = (url) => { const q = qrcode(0, "M"); q.addData(url); q.make(); return q.createSvgTag({ cellSize: 2, margin: 0, scalable: true }); };
-  const tag = (x) => `<div class="t"><img class="lg" src="${location.origin}/assets/heron-logo.png"><div class="nm">${esc(x.title)}</div>
-    <div class="mid"><div><div class="pr">${money(x.price)}</div><div class="sz">${x.size ? "SIZE " + esc(x.size) : ""}</div></div></div>
-    ${x.sku ? `<div class="bc">${bar(x.sku)}</div>` : ""}
+  const bar = (code) => { const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); JsBarcode(svg, code, { format: "CODE128", displayValue: false, margin: 0, height: 40, width: 2 }); svg.setAttribute("preserveAspectRatio", "none"); return svg.outerHTML; };
+  const tag = (x) => !x ? `<div class="t"></div>` : `<div class="t"><img class="lg" src="${location.origin}/assets/heron-logo.png"><div class="nm">${esc(x.title)}</div>
+    <div class="mid"><div class="pr">${money(x.price)}</div><div class="sz">${x.size ? "SIZE " + esc(x.size) : ""}</div></div>
+    ${x.sku ? `<div class="bc">${bar(x.sku)}</div>` : `<div class="bc"></div>`}
     <div class="ft"><span>${esc(x.sku)}</span><span>ALL SALES FINAL</span></div></div>`;
-  const pages = []; for (let i = 0; i < items.length; i += 6) pages.push(`<div class="pg">${items.slice(i, i + 6).map(tag).join("")}</div>`);
+  const cells = [...Array(start).fill(null), ...items], pages = [];
+  for (let i = 0; i < cells.length; i += per) pages.push(`<div class="pg">${cells.slice(i, i + per).map(tag).join("")}</div>`);
   const w = window.open("", "_blank"); if (!w) return toast("Allow pop-ups to print");
   w.document.write(`<!doctype html><html><head><title>Heron labels</title><style>
-  @page{size:4in 6in;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Helvetica,Arial,sans-serif;color:#000}
-  .pg{width:4in;height:6in;display:grid;grid-template-columns:2in 2in;grid-template-rows:repeat(3,2in);page-break-after:always}
-  .t{padding:.1in .11in;display:flex;flex-direction:column;border:.5px dashed #bbb}
-  .lg{height:.2in;width:auto;align-self:flex-start;filter:grayscale(1) contrast(1.4)}
-  .nm{font-size:9pt;line-height:1.15;margin:.04in 0;height:.3in;overflow:hidden;font-weight:600}
-  .mid{display:flex;justify-content:space-between;align-items:center;flex:1}
-  .pr{font-size:28pt;font-weight:700;line-height:1}.sz{font-size:11pt;font-weight:600;margin-top:.04in;letter-spacing:.05em}
-  .qr{width:.66in;height:.66in}.bc{height:.42in;margin:.03in 0}.bc svg{width:100%;height:100%;display:block}.qr svg{width:100%;height:100%}
-  .ft{display:flex;justify-content:space-between;font-size:7pt;letter-spacing:.06em;border-top:.6px solid #000;padding-top:.03in}
-  @media print{.t{border:0}}</style></head><body>${pages.join("")}<script>onload=()=>setTimeout(()=>print(),400)<\/script></body></html>`);
+  @page{size:4in 6in;margin:0}*{box-sizing:border-box}html,body{margin:0;font-family:Helvetica,Arial,sans-serif;color:#000}
+  .pg{width:4in;height:6in;display:grid;grid-template-columns:50.8mm 50.8mm;grid-template-rows:repeat(${rows},${H.toFixed(2)}mm);overflow:hidden;page-break-after:always;break-after:page}
+  .pg:last-child{page-break-after:auto;break-after:auto}
+  .t{display:flex;flex-direction:column;overflow:hidden;border-right:.3pt dotted #000;border-bottom:.3pt dotted #000}.t:nth-child(2n){border-right:0}
+  .lg{align-self:flex-start}.nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+  .mid{display:flex;justify-content:space-between;align-items:baseline}.pr{font-weight:700;line-height:1}.sz{font-weight:700;letter-spacing:.04em}
+  .bc{flex:1;min-height:0}.bc svg{width:100%;height:100%;display:block}.ft{display:flex;justify-content:space-between;letter-spacing:.05em;line-height:1}
+  ${labelCss(H)}
+  @media screen{body{background:#eee;padding:10px}.pg{background:#fff;margin:0 auto 10px}}</style></head><body>${pages.join("")}<script>onload=()=>setTimeout(()=>print(),400)<\/script></body></html>`);
   w.document.close();
   const p = PRINTED(); items.forEach((x) => p.add(x.id)); try { localStorage.setItem("heron-printed", JSON.stringify([...p])); } catch {}
   SEL.clear(); drawInv();
@@ -249,12 +263,56 @@ async function loadOff() { $("#offList").innerHTML = "<p class='small'>Loading�
 async function offAns(id, accept) { try { const r = await A("admin_offer_answer", { id, accept, amount: $("#oa" + id)?.value });
   if (accept) { await navigator.clipboard?.writeText(r.link).catch(() => {}); location.href = `mailto:${r.email}?subject=${encodeURIComponent("Your Heron CA bundle")}&body=${encodeURIComponent("Hi! Here is your bundle at the price we agreed. The link is good for one checkout:\n\n" + r.link + "\n\nHeron CA, Venice Beach")}`; }
   loadOff(); } catch (e) { toast(e.message); } }
-async function repriceAll() {
-  try { if (localStorage.getItem("heron-repriced") && !confirm("Looks like you already did this once. Do it again? Prices would drop another 30%.")) return; } catch {}
-  const inv = (await A("admin_list")).items.filter((x) => x.qty > 0 && !x.sku.startsWith("HC-G-"));
-  const changes = inv.map((x) => ({ id: x.id, price: Math.round(x.price / 100 / (1 + MARKUP / 100)) }));
-  if (!confirm(`Change ${changes.length} prices? Example: ${inv[0] ? esc(inv[0].title) + " " + money(inv[0].price) + " → $" + changes[0].price : ""}`)) return;
-  try { const r = await A("admin_reprice", { changes }); try { localStorage.setItem("heron-repriced", "1"); } catch {} toast(`${r.done} prices updated`); } catch (e) { toast(e.message); }
+function forFlyp(id) {
+  const x = INV.find((i) => i.id === id); if (!x) return;
+  const txt = `${x.title}\n\nPrice: $${Math.round(x.price / 100 * (1 + MARKUP / 100))}\nSKU: ${x.sku}${x.size ? "\nSize: " + x.size : ""}\n\n${x.description || ""}`;
+  navigator.clipboard.writeText(txt).then(() => toast("Copied for Flyp (price +" + MARKUP + "%)")).catch(() => prompt("Copy this:", txt));
+}
+let REC = [];
+const TAX = 9.75; // prices include CA sales tax
+async function loadRec() {
+  if (!INV.length) INV = (await A("admin_list")).items;
+  $("#recSq").innerHTML = "<p class='small'>Loading…</p>";
+  try { const r = (await A("admin_recent")).rows;
+    $("#recSq").innerHTML = r.map((p, i) => `<div class="row"><span></span><div>${new Date(p.at).toLocaleString()} · <b>${money(p.total)}</b> · ${esc(p.method)}<div class="small">${p.lines.map((l) => esc(l.name)).join(", ")}</div></div><button class="chip" onclick="printSq(${i})">Receipt</button></div>`).join("") || "<p class='small'>No payments yet.</p>"; window.__sq = r;
+  } catch (e) { $("#recSq").innerHTML = `<p class="small">${esc(e.message)}</p>`; }
+  try { const c = (await A("admin_receipts")).rows; window.__rc = c;
+    $("#recCash").innerHTML = c.map((x, i) => `<div class="row"><span></span><div>R${x.id} · ${new Date(x.created_at).toLocaleString()} · <b>${money(x.total_cents)}</b> · ${esc(x.method || "")}<div class="small">${x.lines.map((l) => esc(l.name)).join(", ")}</div></div><button class="chip" onclick="reprint(${i})">Reprint</button></div>`).join("") || "<p class='small'>No receipts yet.</p>";
+  } catch (e) { $("#recCash").innerHTML = `<p class="small">${esc(e.message)}</p>`; }
+}
+function drawRec() { const tot = REC.reduce((t, l) => t + Math.round(l.price * 100), 0);
+  $("#recLines").innerHTML = REC.map((l, i) => `<div class="row"><span></span><div>${esc(l.name)}<div class="small">${esc(l.sku || "manual")}</div></div><div>${money(Math.round(l.price * 100))} <button class="chip" onclick="REC.splice(${i},1);drawRec()">×</button></div></div>`).join("") + (REC.length ? `<div class="small" style="text-align:right">Total <b>${money(tot)}</b></div>` : ""); }
+$("#recScan").addEventListener("keydown", async (e) => { if (e.key !== "Enter") return; const v = e.target.value.trim().toUpperCase(); e.target.value = ""; if (!v) return;
+  if (!INV.length) INV = (await A("admin_list")).items;
+  const x = INV.find((i) => i.sku.toUpperCase() === v); if (!x) return toast("No piece with SKU " + v);
+  if (REC.some((l) => l.id === x.id) && !x.sku.startsWith("HC-G-")) return toast("Already added");
+  let price = x.price / 100; if (!price) { price = +prompt(`Price for ${x.title}?`) || 0; }
+  REC.push({ id: x.sku.startsWith("HC-G-") ? null : x.id, name: x.title, sku: x.sku, price }); drawRec(); });
+function recAddManual() { const n = $("#recName").value.trim(), p = +$("#recPrice").value; if (!n || !p) return toast("Name and price"); REC.push({ id: null, name: n, sku: "", price: p }); $("#recName").value = $("#recPrice").value = ""; drawRec(); }
+async function recSave(save) { if (!REC.length) return toast("Add something first");
+  let at = new Date().toISOString();
+  if (save) { try { await A("admin_cash_sale", { ids: REC.map((l) => l.id).filter(Boolean), lines: REC.map(({ name, sku, price }) => ({ name, sku, price })), method: $("#recMethod").value, note: $("#recNote").value }); } catch (e) { return toast(e.message); } }
+  await printReceipt({ at, method: $("#recMethod").value, lines: REC.map((l) => ({ name: l.name, total: Math.round(l.price * 100) })) });
+  REC = []; drawRec(); INV = []; loadRec(); }
+function printSq(i) { const p = window.__sq[i]; printReceipt({ ref: p.id, source: "square", at: p.at, method: p.method, lines: p.lines, discount: p.discount }); }
+function reprint(i) { const x = window.__rc[i]; printReceipt({ no: "R" + x.id, at: x.created_at, method: x.method, lines: x.lines }, true); }
+function recCsv() { const rows = window.__rc || []; const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const csv = ["receipt,date,method,total,items"].concat(rows.map((x) => [ "R" + x.id, x.created_at, x.method, (x.total_cents / 100).toFixed(2), x.lines.map((l) => l.name + " " + (l.total / 100).toFixed(2)).join(" | ") ].map(q).join(","))).join("\n");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = `heron-receipts-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); }
+async function printReceipt(r, already) {
+  const tot = r.lines.reduce((t, l) => t + l.total, 0), tax = Math.round(tot - tot / (1 + TAX / 100));
+  if (!already) { try { const k = await A("admin_receipt_log", { receipt: { no: r.ref || "", method: r.method, lines: r.lines, total: tot, source: r.source || "manual" } }); r.no = "R" + k.no; r.at = k.at || r.at; } catch (e) { toast("Copy not saved: " + e.message); } }
+  const w = window.open("", "_blank"); if (!w) return toast("Allow pop-ups to print");
+  w.document.write(`<!doctype html><html><head><title>Receipt</title><style>@page{size:4in 6in;margin:0}body{margin:0;padding:.25in;font-family:Helvetica,Arial,sans-serif;font-size:10pt;color:#000}
+  img{height:.32in;display:block;margin:0 auto .08in;filter:grayscale(1) contrast(1.4)}.c{text-align:center}.s{font-size:8pt}hr{border:0;border-top:1px dashed #000;margin:.1in 0}
+  .r{display:flex;justify-content:space-between;gap:8px;margin:2px 0}.t{font-weight:700;font-size:13pt}</style></head><body>
+  <img src="${location.origin}/assets/heron-logo.png"><div class="c s">Heron CA LLC · 517 Ocean Front Walk, Unit 6<br>Venice, CA 90291 · heronca.com · info@heronca.com</div><hr>
+  <div class="r s"><span>${new Date(r.at).toLocaleString()}</span><span>${r.no ? "No. " + esc(r.no) : ""}</span></div><hr>
+  ${r.lines.map((l) => `<div class="r"><span>${esc(l.name)}</span><span>${money(l.total)}</span></div>`).join("")}<hr>
+  ${r.discount ? `<div class="r s"><span>Discounts</span><span>-${money(r.discount)}</span></div>` : ""}
+  <div class="r t"><span>TOTAL</span><span>${money(tot)}</span></div><div class="r s"><span>Includes CA sales tax ${TAX}%</span><span>${money(tax)}</span></div><div class="r s"><span>Paid</span><span>${esc(r.method || "")}</span></div><hr>
+  <div class="c s">All sales are final. Thank you for shopping with us!<br>Vintage. New. Ours.</div><script>onload=()=>setTimeout(()=>print(),400)<\/script></body></html>`);
+  w.document.close();
 }
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 async function runPhotos() {

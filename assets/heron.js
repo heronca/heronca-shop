@@ -1,7 +1,8 @@
 // ===== Settings: edit here =====
 const HERON = {
   api: "https://wvvizyrroqejwrfadbpx.supabase.co/functions/v1/heron-shop",
-  aerialKey: "AIzaSyCj-xrTG_sC7A9ZYN2Z8Ibt1SzhAve9d20", // Google Aerial View API key (restricted to heronca.com / heronca.shop)
+  aerial: true, // Google flyover video (the key lives in Supabase, monthly limit there)
+  ownVideo: "", // our own looping video, e.g. "/assets/heron-walk.mp4"; plays when Google's monthly limit is used up
   address: "517 Ocean Front Walk, Venice, CA 90291",
   categories: ["Tops", "Dresses & Jumpsuits", "Coats & Jackets", "Shirts", "Shoes", "Bags & Accessories"],
   links: [ // footer links with logos; add the missing addresses here
@@ -105,20 +106,41 @@ function card(x) {
   <div class="t">${esc(x.title)}</div><div class="m">${esc(x.size)}${x.size ? " · " : ""}<span class="price"><b>${money(x.site_price)}</b><s>${money(x.price)}</s></span></div></a>`;
 }
 
-// Google Aerial View flyover video, shown wherever an element with id="aerial" exists
+// Google Aerial View flyover video
+async function aerialSrc() {
+  try { const { src } = await api("aerial"); if (src) return src; } catch {}
+  return HERON.ownVideo || "";
+}
+function keepPlaying(v) { // never stop: restart if the browser pauses it
+  const go = () => v.play().catch(() => {});
+  v.addEventListener("pause", () => !document.hidden && setTimeout(go, 300));
+  v.addEventListener("ended", () => { v.currentTime = 0; go(); });
+  document.addEventListener("visibilitychange", () => !document.hidden && go());
+  ["touchstart", "click", "scroll"].forEach((e) => addEventListener(e, go, { once: true, passive: true }));
+  go();
+}
+const vid = (src, cls, style = "") => `<video class="${cls}" src="${src}" autoplay muted loop playsinline preload="auto" disablepictureinpicture style="${style}"></video>`;
+
+// homepage: video turns slowly behind the hero, starts right away
+async function heroAerial() {
+  const h = document.getElementById("hero"); if (!h || h.hidden || !(HERON.aerial || HERON.ownVideo)) return;
+  try { const src = await aerialSrc(); if (!src) return;
+    h.insertAdjacentHTML("afterbegin", vid(src, "hero-bg") + `<div class="hero-shade"></div>` + (src === HERON.ownVideo ? "" : `<span class="hero-credit">Aerial imagery: Google</span>`));
+    const v = h.querySelector(".hero-bg"); v.addEventListener("playing", () => h.classList.add("has-video"), { once: true }); keepPlaying(v);
+  } catch {}
+}
+// other pages: video box where id="aerial" exists
 async function aerial() {
-  const box = document.getElementById("aerial"); if (!box || !HERON.aerialKey) return;
-  try {
-    const r = await fetch(`https://aerialview.googleapis.com/v1/videos:lookupVideo?key=${HERON.aerialKey}&address=${encodeURIComponent(HERON.address)}`);
-    const j = await r.json(); const src = j.uris?.MP4_HIGH?.landscapeUri || j.uris?.MP4_MEDIUM?.landscapeUri;
-    if (j.state !== "ACTIVE" || !src) return;
-    box.innerHTML = `<video src="${src}" autoplay muted loop playsinline style="width:100%;display:block;border-radius:6px"></video><div class="small" style="margin-top:4px">Aerial imagery: Google</div>`;
-    box.hidden = false;
+  const box = document.getElementById("aerial"); if (!box || !(HERON.aerial || HERON.ownVideo)) return;
+  try { const src = await aerialSrc(); if (!src) return;
+    box.innerHTML = vid(src, "", "width:100%;display:block;border-radius:6px") + (src === HERON.ownVideo ? "" : `<div class="small" style="margin-top:4px">Aerial imagery: Google</div>`);
+    box.hidden = false; keepPlaying(box.querySelector("video"));
   } catch {}
 }
 document.addEventListener("DOMContentLoaded", () => {
-  const box = document.getElementById("aerial"); if (!box || !HERON.aerialKey) return;
-  // only ask Google when the visitor scrolls near it (keeps us inside the free monthly limit)
+  heroAerial();
+  const box = document.getElementById("aerial"); if (!box || !(HERON.aerial || HERON.ownVideo)) return;
+  if (document.getElementById("hero")?.querySelector(".hero-bg") || location.pathname === "/" || location.pathname.endsWith("index.html")) { box.remove(); return; } // homepage uses the hero instead
   box.hidden = false; box.style.minHeight = "1px";
   const io = new IntersectionObserver((e) => { if (e[0].isIntersecting) { io.disconnect(); box.hidden = true; box.style.minHeight = ""; aerial(); } }, { rootMargin: "300px" });
   io.observe(box);
