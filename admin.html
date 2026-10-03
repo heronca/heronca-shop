@@ -42,6 +42,7 @@ textarea{min-height:110px}
 <section id="t-inv" hidden><div class="note small">Items without photos are hidden on the site. Add photos to show them.</div>
   <input id="filter" placeholder="Search title or SKU" oninput="drawInv()">
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0"><button class="chip" onclick="selNew()">Select not printed yet</button><button class="chip" onclick="SEL.clear();drawInv()">Clear</button><select id="labelRows" class="chip" style="width:auto"><option value="8">Thin · 2×8 (16 per sheet)</option><option value="7" selected>Thin · 2×7 (14)</option><option value="6">Medium · 2×6 (12)</option><option value="5">Thick · 2×5 (10)</option><option value="4">Thick · 2×4 (8)</option></select><input id="labelStart" type="number" min="1" value="1" class="chip" style="width:70px" title="Start at label # (to use a half-used sheet)"><button class="chip on" onclick="printLabels()">Print labels (<span id="selN">0</span>)</button></div>
+  <div id="tagEdit" hidden style="border:1px solid #ddd;border-radius:8px;padding:10px;margin:8px 0"></div>
   <div class="small">Prints on a 4x6 in shipping label, 2 columns. Cut along the dotted lines. "Start at" lets you use the rest of a half-used sheet (labels are counted left to right, top to bottom). Print at 4x6 in, scale 100%.</div>
   <div class="inv" id="inv" style="margin-top:12px"></div></section>
 
@@ -150,17 +151,38 @@ const PRINTED = () => { try { return new Set(JSON.parse(localStorage.getItem("he
 function selNew() { const p = PRINTED(); INV.filter((x) => x.qty > 0 && !p.has(x.id)).forEach((x) => SEL.add(x.id)); drawInv(); }
 // labels on a 4x6 in shipping label sheet: 2 columns, 4 to 8 rows, cut along the dotted lines
 function labelCss(H) { // H = row height in mm, width is always 50.8 mm
-  if (H < 23) return `.t{padding:1mm 1.6mm}.lg{display:none}.nm{font-size:6pt}.mid{margin:.3mm 0}.pr{font-size:13pt}.sz{font-size:8pt}.ft{font-size:5pt;margin-top:.3mm}`;
-  if (H < 34) return `.t{padding:1.5mm 2mm}.lg{display:none}.nm{font-size:7pt}.mid{margin:.5mm 0}.pr{font-size:${H < 28 ? 16 : 19}pt}.sz{font-size:9.5pt}.ft{font-size:5.5pt;margin-top:.5mm}`;
-  return `.t{padding:2mm 2.4mm}.lg{display:block;height:3.6mm;width:auto;margin-bottom:.8mm;filter:grayscale(1) contrast(1.4)}.nm{font-size:7.5pt}.mid{margin:.8mm 0}.pr{font-size:24pt}.sz{font-size:11pt}.ft{font-size:6pt;margin-top:.6mm}`;
+  if (H < 23) return `.t{padding:1mm 1.6mm}.lg,.in{display:none}.nm{font-size:6pt}.mid{margin:.3mm 0}.pr{font-size:13pt}.sz{font-size:8pt}.ft{font-size:5pt;margin-top:.3mm}`;
+  if (H < 28) return `.t{padding:1.5mm 2mm}.lg,.in{display:none}.nm{font-size:7pt}.mid{margin:.5mm 0}.pr{font-size:16pt}.sz{font-size:9.5pt}.ft{font-size:5.5pt;margin-top:.5mm}`;
+  if (H < 34) return `.t{padding:1.4mm 2mm}.lg{display:none}.nm{font-size:7pt}.in{font-size:5.6pt;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mid{margin:.4mm 0}.pr{font-size:15pt}.sz{font-size:9pt}.ft{font-size:5.5pt;margin-top:.4mm}`;
+  return `.t{padding:1.8mm 2.4mm}.lg{display:block;height:3.4mm;width:auto;margin-bottom:.6mm;filter:grayscale(1) contrast(1.4)}.nm{font-size:7pt;white-space:normal;max-height:2.4em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.in{font-size:6pt;line-height:1.25;max-height:2.5em;overflow:hidden}.mid{margin:.5mm 0}.pr{font-size:18pt}.sz{font-size:10pt}.ft{font-size:5.5pt;margin-top:.5mm}`;
 }
-async function printLabels() {
+// short product facts for big labels: made in, fabric, model. Picked from the description, editable before printing.
+const TAGNOTE = () => { try { return JSON.parse(localStorage.getItem("heron-tagnote") || "{}"); } catch { return {}; } };
+function facts(x) {
+  const d = String(x.description || "").replace(/\s+/g, " "), out = [];
+  const made = d.match(/made in ([a-z .]{3,20}?)(?=[.,;|\n]|\s(?:and|with|from)\b|$)/i); if (made) out.push("Made in " + made[1].trim().replace(/\b\w/g, (c) => c.toUpperCase()));
+  const mat = d.match(/\d{1,3}\s?%\s?[a-z]+(?:[\s,/&]+\d{1,3}\s?%\s?[a-z]+)*/i); if (mat) out.push(mat[0].replace(/\s?%\s?/g, "% "));
+  else { const m2 = d.match(/\b(silk|cashmere|wool|linen|leather|suede|cotton|denim|merino|alpaca|velvet|satin)\b/i); if (m2) out.push(m2[1][0].toUpperCase() + m2[1].slice(1).toLowerCase()); }
+  const mod = d.match(/\b(?:style|model|style no\.?|art\.?|ref\.?)\s*[:#]?\s*([A-Z0-9][A-Z0-9-]{2,})/i); if (mod) out.push("Model " + mod[1]);
+  return out.join(" · ");
+}
+function saveNotes() { const n = TAGNOTE(); document.querySelectorAll("#tagEdit input[data-id]").forEach((i) => (n[i.dataset.id] = i.value.trim())); try { localStorage.setItem("heron-tagnote", JSON.stringify(n)); } catch {} }
+async function printLabels(ready = false) {
   const items = INV.filter((x) => SEL.has(x.id)); if (!items.length) return toast("Select pieces first");
-  const rows = Number($("#labelRows").value), start = Math.max(1, Number($("#labelStart").value) || 1) - 1, H = 152.4 / rows, per = rows * 2;
+  const rows0 = Number($("#labelRows").value), notes = TAGNOTE();
+  if (rows0 <= 5 && !ready) {
+    $("#tagEdit").innerHTML = `<div class="small" style="margin-bottom:6px"><b>Info line for big labels.</b> Filled from the description when possible. Short is best: country, fabric, model.</div>` +
+      items.map((x) => `<div style="margin:6px 0"><div class="small">${esc(x.title)}</div><input data-id="${x.id}" maxlength="90" value="${esc(notes[x.id] ?? facts(x))}" placeholder="Made in Italy · 100% wool · Model 2019"></div>`).join("") +
+      `<div style="display:flex;gap:6px;margin-top:8px"><button class="chip on" onclick="saveNotes();printLabels(true)">Print</button><button class="chip" onclick="$('#tagEdit').hidden=true">Cancel</button></div>`;
+    $("#tagEdit").hidden = false; return;
+  }
+  $("#tagEdit").hidden = true;
+  const rows = rows0, start = Math.max(1, Number($("#labelStart").value) || 1) - 1, H = 152.4 / rows, per = rows * 2;
   try { localStorage.setItem("heron-label-rows", rows); } catch {}
   if (!window.JsBarcode) await new Promise((ok, no) => { const sc = document.createElement("script"); sc.src = "https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); });
   const bar = (code) => { const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); JsBarcode(svg, code, { format: "CODE128", displayValue: false, margin: 0, height: 40, width: 2 }); svg.setAttribute("preserveAspectRatio", "none"); return svg.outerHTML; };
   const tag = (x) => !x ? `<div class="t"></div>` : `<div class="t"><img class="lg" src="${location.origin}/assets/heron-logo.png"><div class="nm">${esc(x.title)}</div>
+    ${(TAGNOTE()[x.id] ?? "") ? `<div class="in">${esc(TAGNOTE()[x.id])}</div>` : ""}
     <div class="mid"><div class="pr">${money(x.price)}</div><div class="sz">${x.size ? "SIZE " + esc(x.size) : ""}</div></div>
     ${x.sku ? `<div class="bc">${bar(x.sku)}</div>` : `<div class="bc"></div>`}
     <div class="ft"><span>${esc(x.sku)}</span><span>ALL SALES FINAL</span></div></div>`;
