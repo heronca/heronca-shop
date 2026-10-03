@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex"><title>Heron Admin</title><link rel="icon" href="/assets/heron-ca.png">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&family=Jost:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/heron.css?v=8">
+<link rel="stylesheet" href="/assets/heron.css?v=9">
 <style>
 .tabs{display:flex;gap:6px;margin:18px 0}
 label{display:block;margin:12px 0 4px}
@@ -39,9 +39,18 @@ textarea{min-height:110px}
 </section>
 
 <section id="t-inv" hidden><div class="note small">Items without photos are hidden on the site. Add photos to show them.</div>
-  <input id="filter" placeholder="Search title or SKU" oninput="drawInv()"><div class="inv" id="inv" style="margin-top:12px"></div></section>
+  <input id="filter" placeholder="Search title or SKU" oninput="drawInv()">
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0"><button class="chip" onclick="selNew()">Select not printed yet</button><button class="chip" onclick="SEL.clear();drawInv()">Clear</button><button class="chip on" onclick="printLabels()">Print labels (<span id="selN">0</span>)</button></div>
+  <div class="small">Labels: 4x6 in thermal sheet, 6 tags of 2x2 in. Each tag has the price, size, SKU and a QR code to the piece online.</div>
+  <div class="inv" id="inv" style="margin-top:12px"></div></section>
 
 <section id="t-imp" hidden>
+  <div class="note small"><b>Aerial video</b> (one time): asks Google to make the flyover video of the shop. It can take a few hours; the site shows it by itself when ready.</div>
+  <button class="btn alt" style="margin-bottom:24px" onclick="aerialRender()">Request aerial video</button>
+  <div class="note small"><b>Moving to real Square</b><br>Step 1, while still in test mode: save the photos. Step 2, after switching to real Square and importing: put them back.</div>
+  <div style="display:grid;gap:8px;margin-bottom:24px"><button class="btn alt" onclick="savePhotos()">1. Save photo backup</button><button class="btn alt" onclick="restorePhotos()">2. Restore photos from backup</button><div id="bkInfo" class="small"></div></div>
+  <div class="note small"><b>Sold somewhere else?</b> Pick a Flyp sales report (xlsx or csv). Every piece in it is marked sold here and disappears from the site. In-store Square sales drop off by themselves.</div>
+  <input id="sales" type="file" accept=".xlsx,.csv"><div id="salesInfo" class="small" style="margin:10px 0 24px"></div>
   <div class="note small">Pick the eBay "Active listings" CSV. Each listing becomes a Square item with stock 1, its own SKU and the photos from that eBay listing. Titles already in Square are skipped, so it is safe to run again.</div>
   <input id="csv" type="file" accept=".csv"><div id="impInfo" class="small" style="margin:10px 0"></div>
   <button class="btn" id="impGo" disabled onclick="runImport()">Import</button>
@@ -51,7 +60,7 @@ textarea{min-height:110px}
 </div>
 <div class="toast" id="toast"></div>
 </main>
-<script src="/assets/heron.js?v=8"></script>
+<script src="/assets/heron.js?v=9"></script>
 <script>
 let PW = sessionStorage.getItem("heron-pw") || "", PHOTOS = [], INV = [], ROWS = [];
 const A = (action, data) => api(action, data, { "x-admin-password": PW });
@@ -90,9 +99,37 @@ async function loadInv() { $("#inv").innerHTML = "<p class='small'>Loading…</p
 function drawInv() {
   const f = $("#filter").value.toLowerCase();
   $("#inv").innerHTML = INV.filter((x) => !f || (x.title + x.sku).toLowerCase().includes(f)).map((x) => `<div class="row">
-    ${x.images[0] ? `<img src="${x.images[0]}">` : `<div class="noimg"></div>`}
-    <div>${esc(x.title)}<div class="small">${esc(x.sku)} · ${money(x.price)} · ${x.qty > 0 ? "in stock" : "sold"} · ${x.images.length} photos</div></div>
-    <label class="chip" style="margin:0">+ Photos<input type="file" accept="image/*" multiple hidden onchange="addPhotos('${x.item_id}','${esc(x.sku)}',this)"></label></div>`).join("");
+    <label style="margin:0;display:flex;gap:8px;align-items:center"><input type="checkbox" style="width:auto" ${SEL.has(x.id) ? "checked" : ""} onchange="this.checked ? SEL.add('${x.id}') : SEL.delete('${x.id}'); $('#selN').textContent = SEL.size">${x.images[0] ? `<img src="${x.images[0]}">` : `<div class="noimg"></div>`}</label>
+    <div>${esc(x.title)}<div class="small">${esc(x.sku)} · ${money(x.price)} · ${x.qty > 0 ? "in stock" : "sold"} · ${x.images.length} photos${PRINTED().has(x.id) ? " · label printed" : ""}</div></div>
+    <div style="display:grid;gap:6px">${x.qty > 0 ? `<button class="chip" onclick="markSold(['${x.id}'])">Sold</button>` : ""}<label class="chip" style="margin:0">+ Photos<input type="file" accept="image/*" multiple hidden onchange="addPhotos('${x.item_id}','${esc(x.sku)}',this)"></label></div></div>`).join("");
+  $("#selN").textContent = SEL.size;
+}
+const SEL = new Set();
+const PRINTED = () => { try { return new Set(JSON.parse(localStorage.getItem("heron-printed") || "[]")); } catch { return new Set(); } };
+function selNew() { const p = PRINTED(); INV.filter((x) => x.qty > 0 && !p.has(x.id)).forEach((x) => SEL.add(x.id)); drawInv(); }
+async function printLabels() {
+  const items = INV.filter((x) => SEL.has(x.id)); if (!items.length) return toast("Select pieces first");
+  if (!window.qrcode) await new Promise((ok, no) => { const sc = document.createElement("script"); sc.src = "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); });
+  const qr = (url) => { const q = qrcode(0, "M"); q.addData(url); q.make(); return q.createSvgTag({ cellSize: 2, margin: 0, scalable: true }); };
+  const tag = (x) => `<div class="t"><img class="lg" src="${location.origin}/assets/heron-logo.png"><div class="nm">${esc(x.title)}</div>
+    <div class="mid"><div><div class="pr">${money(x.price)}</div><div class="sz">${x.size ? "SIZE " + esc(x.size) : ""}</div></div><div class="qr">${qr(location.origin + "/item.html?id=" + x.id)}</div></div>
+    <div class="ft"><span>${esc(x.sku)}</span><span>ALL SALES FINAL</span></div></div>`;
+  const pages = []; for (let i = 0; i < items.length; i += 6) pages.push(`<div class="pg">${items.slice(i, i + 6).map(tag).join("")}</div>`);
+  const w = window.open("", "_blank"); if (!w) return toast("Allow pop-ups to print");
+  w.document.write(`<!doctype html><html><head><title>Heron labels</title><style>
+  @page{size:4in 6in;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Helvetica,Arial,sans-serif;color:#000}
+  .pg{width:4in;height:6in;display:grid;grid-template-columns:2in 2in;grid-template-rows:repeat(3,2in);page-break-after:always}
+  .t{padding:.1in .11in;display:flex;flex-direction:column;border:.5px dashed #bbb}
+  .lg{height:.17in;width:auto;align-self:flex-start;filter:grayscale(1) contrast(1.4)}
+  .nm{font-size:7pt;line-height:1.15;margin:.05in 0;height:.32in;overflow:hidden}
+  .mid{display:flex;justify-content:space-between;align-items:center;flex:1}
+  .pr{font-size:22pt;font-weight:700;line-height:1}.sz{font-size:8pt;margin-top:.04in;letter-spacing:.05em}
+  .qr{width:.8in;height:.8in}.qr svg{width:100%;height:100%}
+  .ft{display:flex;justify-content:space-between;font-size:5.5pt;letter-spacing:.06em;border-top:.6px solid #000;padding-top:.03in}
+  @media print{.t{border:0}}</style></head><body>${pages.join("")}<script>onload=()=>setTimeout(()=>print(),400)<\/script></body></html>`);
+  w.document.close();
+  const p = PRINTED(); items.forEach((x) => p.add(x.id)); try { localStorage.setItem("heron-printed", JSON.stringify([...p])); } catch {}
+  SEL.clear(); drawInv();
 }
 async function addPhotos(item_id, sku, input) {
   toast("Uploading…"); try { const images = await Promise.all([...input.files].map(prep)); await A("admin_add_photos", { item_id, sku, images }); toast("Photos added"); loadInv(); } catch (e) { toast(e.message); }
@@ -116,6 +153,49 @@ $("#csv").onchange = async (e) => {
   $("#impInfo").textContent = `${ROWS.length} listings ready. Photos are copied from each eBay listing. This takes a few minutes.`;
   $("#impGo").disabled = $("#picGo").disabled = !ROWS.length;
 };
+async function markSold(ids) {
+  if (!confirm(`Mark ${ids.length} piece(s) as sold? They will disappear from the site.`)) return;
+  try { await A("admin_mark_sold", { ids }); toast("Marked sold"); if (!$("#t-inv").hidden) loadInv(); } catch (e) { toast(e.message); }
+}
+$("#sales").onchange = async (e) => {
+  const f = e.target.files[0]; if (!f) return; $("#salesInfo").textContent = "Reading…";
+  try {
+    if (!window.XLSX) await new Promise((ok, no) => { const sc = document.createElement("script"); sc.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); });
+    const wb = XLSX.read(await f.arrayBuffer()); const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+    const key = Object.keys(rows[0] || {}).find((k) => /title|item|name|product/i.test(k));
+    if (!key) throw new Error("Could not find a title column in this file");
+    const norm = (t) => String(t).trim().toLowerCase().replace(/\s+/g, " ");
+    const titles = new Set(rows.map((r) => norm(r[key])).filter(Boolean));
+    const inv = (await A("admin_list")).items;
+    const hit = inv.filter((x) => x.qty > 0 && titles.has(norm(x.title)));
+    if (!hit.length) { $("#salesInfo").textContent = `${titles.size} sales in the file, none of them are still for sale here.`; return; }
+    $("#salesInfo").textContent = `${titles.size} sales in the file. Found ${hit.length} still for sale here: ${hit.map((x) => x.title).join(" · ")}`;
+    await markSold(hit.map((x) => x.id));
+    $("#salesInfo").textContent += " · Done.";
+  } catch (err) { $("#salesInfo").textContent = "Stopped: " + err.message; }
+};
+async function savePhotos() {
+  try { const items = (await api("list")).items; const map = {};
+    for (const x of items) if (x.images.length) map[x.title.trim().toLowerCase()] = x.images;
+    const txt = JSON.stringify(map); localStorage.setItem("heron-photo-backup", txt);
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([txt], { type: "application/json" })); a.download = "heron-photo-backup.json"; a.click();
+    $("#bkInfo").textContent = `Saved photos for ${Object.keys(map).length} pieces in this browser (and downloaded a copy).`;
+  } catch (e) { $("#bkInfo").textContent = "Stopped: " + e.message; }
+}
+async function restorePhotos() {
+  let map; try { map = JSON.parse(localStorage.getItem("heron-photo-backup") || "null"); } catch {}
+  if (!map) { $("#bkInfo").textContent = "No backup in this browser. Use the same browser where you pressed step 1."; return; }
+  const inv = (await A("admin_list")).items.filter((x) => !x.images.length && map[x.title.trim().toLowerCase()]);
+  let ok = 0, fail = 0;
+  for (const x of inv) { $("#bkInfo").textContent = `Photos ${ok + fail + 1} / ${inv.length}…`;
+    try { await A("admin_add_photos", { item_id: x.item_id, sku: x.sku, images: map[x.title.trim().toLowerCase()].slice(0, 6) }); ok++; } catch (e) { fail++; } }
+  $("#bkInfo").textContent = `Done. ${ok} pieces got photos, ${fail} failed.`;
+}
+async function aerialRender() {
+  if (!HERON.aerialKey) return toast("Add the Aerial View key in heron.js first");
+  const r = await fetch(`https://aerialview.googleapis.com/v1/videos:renderVideo?key=${HERON.aerialKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ address: HERON.address }) });
+  const j = await r.json(); toast(j.state ? `Google says: ${j.state}` : (j.error?.message || "Request failed"));
+}
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 async function runPhotos() {
   $("#picGo").disabled = true; let ok = 0, fail = 0;

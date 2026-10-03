@@ -1,6 +1,8 @@
 // ===== Settings: edit here =====
 const HERON = {
   api: "https://wvvizyrroqejwrfadbpx.supabase.co/functions/v1/heron-shop",
+  aerialKey: "AIzaSyCj-xrTG_sC7A9ZYN2Z8Ibt1SzhAve9d20", // Google Aerial View API key (restricted to heronca.com / heronca.shop)
+  address: "517 Ocean Front Walk, Venice, CA 90291",
   categories: ["Tops", "Dresses & Jumpsuits", "Coats & Jackets", "Shirts", "Shoes", "Bags & Accessories"],
   links: [ // footer links with logos; add the missing addresses here
     ["Instagram", "https://www.instagram.com/heron.ca/", "instagram.com"],
@@ -94,3 +96,16 @@ function card(x) {
   return `<a class="card${x.sold ? " is-sold" : ""}" href="/item.html?id=${x.id}"><div class="ph"><img loading="lazy" src="${x.images[0]}" alt="${esc(x.title)}">${x.images[1] ? `<img loading="lazy" src="${x.images[1]}" alt="">` : ""}${x.sold ? `<span class="badge sold caps">Sold</span>` : ""}</div>
   <div class="t">${esc(x.title)}</div><div class="m">${esc(x.size)}${x.size ? " · " : ""}<span class="price"><b>${money(x.site_price)}</b><s>${money(x.price)}</s></span></div></a>`;
 }
+
+// Google Aerial View flyover video, shown wherever an element with id="aerial" exists
+async function aerial() {
+  const box = document.getElementById("aerial"); if (!box || !HERON.aerialKey) return;
+  try {
+    const r = await fetch(`https://aerialview.googleapis.com/v1/videos:lookupVideo?key=${HERON.aerialKey}&address=${encodeURIComponent(HERON.address)}`);
+    const j = await r.json(); const src = j.uris?.MP4_HIGH?.landscapeUri || j.uris?.MP4_MEDIUM?.landscapeUri;
+    if (j.state !== "ACTIVE" || !src) return;
+    box.innerHTML = `<video src="${src}" autoplay muted loop playsinline style="width:100%;display:block;border-radius:6px"></video><div class="small" style="margin-top:4px">Aerial imagery: Google</div>`;
+    box.hidden = false;
+  } catch {}
+}
+document.addEventListener("DOMContentLoaded", aerial);
