@@ -45,6 +45,8 @@ textarea{min-height:110px}
   <div class="note small">Pick the eBay "Active listings" CSV. Each listing becomes a Square item with stock 1, its own SKU and the photos from that eBay listing. Titles already in Square are skipped, so it is safe to run again.</div>
   <input id="csv" type="file" accept=".csv"><div id="impInfo" class="small" style="margin:10px 0"></div>
   <button class="btn" id="impGo" disabled onclick="runImport()">Import</button>
+  <button class="btn alt" id="picGo" disabled style="margin-top:10px" onclick="runPhotos()">Fetch missing photos from eBay (slow)</button>
+  <div class="small" style="margin-top:6px">Copies photos for items that are already in Square but have none. It goes one item every few seconds so eBay does not block it. Keep this page open; you can run it again to continue.</div>
 </section>
 </div>
 <div class="toast" id="toast"></div>
@@ -112,8 +114,27 @@ $("#csv").onchange = async (e) => {
     category: MAP[r[k("eBay category 1 name")]] || "Tops", description: `Condition: ${r[k("Condition")]}`,
     sku: (r[k("Custom label (SKU)")] || "").trim() || undefined, ebay: r[k("Item number")] }));
   $("#impInfo").textContent = `${ROWS.length} listings ready. Photos are copied from each eBay listing. This takes a few minutes.`;
-  $("#impGo").disabled = !ROWS.length;
+  $("#impGo").disabled = $("#picGo").disabled = !ROWS.length;
 };
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+async function runPhotos() {
+  $("#picGo").disabled = true; let ok = 0, fail = 0;
+  const inv = (await A("admin_list")).items, norm = (t) => t.trim().toLowerCase();
+  const todo = ROWS.map((r) => ({ r, x: inv.find((i) => norm(i.title) === norm(r.title)) })).filter((o) => o.x && !o.x.images.length && o.r.ebay);
+  for (let i = 0; i < todo.length; i++) {
+    const { r, x } = todo[i];
+    $("#impInfo").textContent = `Photos ${i + 1} / ${todo.length} · ${ok} done, ${fail} failed · ${r.title}`;
+    let done = false;
+    for (let t = 0; t < 2 && !done; t++) {
+      try { await A("admin_ebay_photos", { item_id: x.item_id, ebay: r.ebay, sku: x.sku }); done = true; }
+      catch (e) { if (t === 0) await wait(20000); }
+    }
+    done ? ok++ : fail++;
+    await wait(4000);
+  }
+  $("#impInfo").textContent = `Photos finished. ${ok} items got photos, ${fail} failed. Run again later for the failed ones, or add them from Inventory.`;
+  $("#picGo").disabled = false;
+}
 async function runImport() {
   $("#impGo").disabled = true; let made = 0, skipped = 0, pics = 0;
   try { for (let i = 0; i < ROWS.length; i += 4) { $("#impInfo").textContent = `Importing ${i} / ${ROWS.length}…`;
