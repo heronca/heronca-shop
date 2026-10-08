@@ -65,6 +65,10 @@ async function checkout(ids, pickup = false) {
   catch (e) { toast(e.message); SHOP = null; }
 }
 
+function mrspaceCredit() {
+  const words={en:"Built by Mr. Space · Package 03",tr:"Mr. Space tarafından yapıldı · Paket 03",es:"Creado por Mr. Space · Paquete 03",de:"Erstellt von Mr. Space · Paket 03",fr:"Créé par Mr. Space · Formule 03"};
+  return words[document.documentElement.lang]||words.en;
+}
 function chrome() {
   document.body.insertAdjacentHTML("afterbegin", `
   <div class="strip caps">Buy more, save more: 15% off your 2nd piece, up to 30% · Free US shipping over $80</div>
@@ -76,7 +80,7 @@ function chrome() {
   document.body.insertAdjacentHTML("beforeend", `
   <footer><div class="wrap"><img class="logo-f" src="/assets/heron-footer.png" alt="Heron CA"><div class="caps">Vintage. New. Ours.</div>
   <div class="small">Also find us on</div><div class="links">${HERON.links.filter((l) => l[1]).map(([n, u, d]) => `<a class="plat" href="${u}" target="_blank" rel="noopener"><img src="https://www.google.com/s2/favicons?domain=${d}&sz=64" alt="" width="20" height="20">${n}</a>`).join("")}</div>
-  <div class="small"><a href="/about.html">About</a> · <a href="/about.html#returns">Returns</a> · <a href="/about.html#visit">Visit</a><br>517 Ocean Front Walk, Unit 6, Venice, CA 90291 · Open daily 11:00 to 5:30<br><a href="mailto:info@heronca.com">info@heronca.com</a></div></div></footer>
+  <div class="small"><a href="/about.html">About</a> · <a href="/about.html#returns">Returns</a> · <a href="/about.html#visit">Visit</a><br>517 Ocean Front Walk, Unit 6, Venice, CA 90291 · Open daily 11:00 to 5:30<br><a href="mailto:info@heronca.com">info@heronca.com</a><br><a class="studio-credit" href="https://mrspace.online/#heron-project" target="_blank" rel="noopener">${mrspaceCredit()}</a></div></div></footer>
   <div class="drawer" id="drawer"><div class="shade" onclick="closeBag()"></div><div class="panel">
   <div class="head" style="margin:0"><h2>Your bag</h2><button class="chip" onclick="closeBag()">Close</button></div>
   <div class="rows" id="bagRows"></div><div class="sum" id="bagSum"></div>
