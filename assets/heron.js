@@ -66,10 +66,12 @@ async function checkout(ids, pickup = false) {
 }
 
 function mrspaceCredit() {
-  const words={en:"Built by Mr. Space · Package 03",tr:"Mr. Space tarafından yapıldı · Paket 03",es:"Creado por Mr. Space · Paquete 03",de:"Erstellt von Mr. Space · Paket 03",fr:"Créé par Mr. Space · Formule 03"};
+  const words={en:"This website is a Mr. Space product",tr:"Bu site bir Mr. Space ürünüdür",es:"Este sitio web es un producto de Mr. Space",de:"Diese Website ist ein Produkt von Mr. Space",fr:"Ce site est un produit Mr. Space"};
   return words[document.documentElement.lang]||words.en;
 }
 function chrome() {
+  if(window.parent!==window){const bridge=document.createElement("script");bridge.src="https://mrspace.online/assets/ms-editor-bridge.js?v=1";document.head.append(bridge);}
+
   document.body.insertAdjacentHTML("afterbegin", `
   <div class="strip caps">Buy more, save more: 15% off your 2nd piece, up to 30% · Free US shipping over $80</div>
   <header class="top"><div class="wrap bar"><a class="logo" href="/"><img src="/assets/heron-logo.png" alt="Heron CA"></a>
