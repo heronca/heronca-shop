@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {mrspaceAdmin} from '../supabase/functions/heron-shop/mrspace-auth.ts';
+const req=new Request('https://example.test',{headers:{'x-mrspace-token':'fixture-token-'.repeat(8)}});
+let calls=0;const good=async(url,opts)=>{calls++;assert.equal(url,'https://tizfdnsjhhepxnqqrzuk.supabase.co/rest/v1/rpc/ms_heron_admin_access');assert.equal(opts.headers.Authorization,'Bearer '+'fixture-token-'.repeat(8));return Response.json(true);};
+assert.equal(await mrspaceAdmin(req,good),true);assert.equal(calls,1);
+assert.equal(await mrspaceAdmin(new Request('https://example.test'),good),false);assert.equal(calls,1);
+for(const body of [false,'true',{admin:true},null])assert.equal(await mrspaceAdmin(req,async()=>Response.json(body)),false);
+assert.equal(await mrspaceAdmin(req,async()=>new Response('Forbidden',{status:403})),false);
+assert.equal(await mrspaceAdmin(req,async()=>{throw Error('unavailable');}),false);
+console.log('PASS Heron delegates only to the fixed project and accepts a strict authenticated admin result; failures deny access');
