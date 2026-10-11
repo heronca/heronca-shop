@@ -94,6 +94,11 @@ $15 Rack Item | 15 | RACK15</textarea>
   <div class="note small">Pick a current eBay "Active listings" CSV. Listings are linked by eBay number. Existing Square prices and stock are preserved. A cover photo is required to appear on the site. Failed listings can be retried without recreating them.</div>
   <div id="ebayStatus" class="note small" role="status">Checking eBay connection when this tab opens…</div>
   <input id="csv" type="file" accept=".csv"><div id="impInfo" class="small" style="margin:10px 0"></div>
+  <details style="margin:12px 0"><summary>Or paste CSV text</summary>
+    <label for="csvText">Paste the complete CSV, including its column header</label>
+    <textarea id="csvText" spellcheck="false" placeholder="Item number,Title,Available quantity,Currency,Current price…"></textarea>
+    <button class="btn alt" id="csvRead" type="button" onclick="loadImportCSV($('#csvText').value)">Review pasted CSV</button>
+  </details>
   <div id="conAsk" hidden class="note small"><b>Any consignment pieces in this file?</b> Tick them; they get HC-K SKUs (50% to the owner).<div id="conList" style="max-height:260px;overflow:auto;margin-top:8px"></div></div>
   <button class="btn" id="impGo" disabled onclick="runImport()">Import / retry unfinished</button>
   <button class="btn alt" id="impStop" hidden onclick="IMPORT_STOP = true; this.disabled = true;">Stop after this listing</button>
@@ -282,6 +287,7 @@ let IMPORT_RESULTS = [], IMPORT_BUSY = false, IMPORT_STOP = false;
 function importBusy(busy) {
   IMPORT_BUSY = busy;
   $("#csv").disabled = busy;
+  $("#csvText").disabled = $("#csvRead").disabled = busy;
   $("#impGo").disabled = $("#picGo").disabled = busy || !ROWS.length;
   $("#impStop").hidden = !busy;
   $("#conList").querySelectorAll("input").forEach((x) => x.disabled = busy);
@@ -290,17 +296,22 @@ function drawImportResults() {
   $("#impResults").innerHTML = IMPORT_RESULTS.map((r) => `<div style="padding:8px 0;border-bottom:1px solid #ddd"><b>${esc(r.title)}</b> · ${esc(r.ebay)}<br>${r.status === "failed" ? `<span style="color:#9b2226">${esc(r.error)}</span>` : `${r.status === "created" ? "Created" : "Already linked"} · cover photo available`}</div>`).join("");
   $("#impDownload").hidden = !IMPORT_RESULTS.length;
 }
-$("#csv").onchange = async (e) => {
-  if (IMPORT_BUSY || !e.target.files[0]) return;
+function loadImportCSV(text) {
+  if (IMPORT_BUSY) return;
   ROWS = []; IMPORT_RESULTS = []; $("#conAsk").hidden = true;
   try {
-    const parsed = ebayCsvRows(await e.target.files[0].text(), MARKUP);
+    const parsed = ebayCsvRows(text, MARKUP);
     ROWS = parsed.rows; IMPORT_RESULTS = parsed.issues;
     $("#conList").innerHTML = ROWS.map((r, i) => `<label style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" style="width:auto" onchange="ROWS[${i}].consign = this.checked">${esc(r.title)} <span class="small">· ${esc(r.start.slice(0, 9))}</span></label>`).join("");
     $("#conAsk").hidden = !ROWS.length;
     $("#impInfo").textContent = `${ROWS.length} listings ready; ${parsed.issues.length} need review. Prices include the existing ${MARKUP}% marketplace markup conversion.`;
   } catch (err) { $("#impInfo").textContent = err.message; }
   drawImportResults(); importBusy(false);
+}
+$("#csv").onchange = async (e) => {
+  if (IMPORT_BUSY || !e.target.files[0]) return;
+  try { loadImportCSV(await e.target.files[0].text()); }
+  catch (err) { $("#impInfo").textContent = err.message; }
 };
 async function loadEbayStatus() {
   try { const s = await A("admin_ebay_status"); $("#ebayStatus").textContent = s.connected
