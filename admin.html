@@ -23,7 +23,7 @@
 <div class="homegrid"><div class="panel"><div class="panelhead"><div><h2>Sitede görünmeyen ürünler <span class="badge warn" id="missingN">—</span></h2><p class="small">Stokta olup satışa çıkamayan ürünler.</p></div><button class="quiet" onclick="openInventory('hidden')">Tümünü gör →</button></div><div id="attentionList"><p class="small">Kontrol ediliyor…</p></div></div>
 <div class="panel"><h2>Bağlantılar</h2><div class="connectiongrid"><div class="statusline"><div><b>Square</b><p class="small">Ürün ve stok kaynağı</p></div><span id="squareBadge" class="badge muted">Kontrol ediliyor</span></div><div class="statusline"><div><b>eBay API</b><p class="small">Resmî satıcı bağlantısı</p></div><span id="ebayBadge" class="badge warn">Bağlı değil</span></div><div class="statusline"><div><b>Flyp</b><p class="small">Chrome ve Mac açık kalmalı</p></div><a class="quiet" href="https://tools.joinflyp.com/my-items" target="_blank" rel="noopener">Aç ↗</a></div></div><p class="footerhint">Kanallar arasında otomatik stok eşitleme henüz kurulu değil. Satılanları Satışlar bölümünden işleyebilirsin.</p></div></div><p id="lastRefresh" class="footerhint"></p></section>
 <section id="t-inv" hidden><div class="pagehead"><div><h1>Ürünler</h1><p>Görünürlük, fotoğraf, stok ve barkod işlemleri.</p></div><button class="btn alt" onclick="loadInv()">Yenile</button></div>
-<div class="panel"><div class="toolbar"><input id="filter" aria-label="Ürün ara" placeholder="Ürün adı veya SKU ile ara…" oninput="INV_PAGE=1;drawInv()"><select id="invStatus" aria-label="Ürün durumu" onchange="INV_PAGE=1;drawInv()"><option value="all">Tüm ürünler</option><option value="stock">Stoktaki ürünler</option><option value="live">Sitede satışta</option><option value="hidden">Sitede görünmeyen</option><option value="noPhoto">Fotoğrafı eksik</option><option value="draft">Yayın bekleyen</option><option value="sold">Stokta olmayan</option><option value="consign">Konsinye</option><option value="store">Mağazaya özel</option></select></div>
+<div class="panel"><div class="toolbar"><input id="filter" aria-label="Ürün ara" placeholder="Ürün adı veya SKU ile ara…" oninput="INV_PAGE=1;drawInv()"><select id="invStatus" aria-label="Ürün durumu" onchange="INV_PAGE=1;drawInv()"><option value="all">Tüm ürünler</option><option value="stock">Stoktaki ürünler</option><option value="live">Sitede satışta</option><option value="hidden">Sitede görünmeyen</option><option value="noPhoto">Fotoğrafı eksik</option><option value="draft">Yayın bekleyen</option><option value="sold">Stokta olmayan</option><option value="consign">Konsinye</option><option value="store">Mağazaya özel</option><option value="archived">Kaldırılanlar</option></select></div>
 <div style="display:flex;justify-content:space-between;gap:15px"><span id="invCount" class="small"></span><button class="quiet" onclick="selNew()">Barkodu basılmayanları seç</button></div>
 <div class="inv" id="inv"></div><div id="invPager" class="toolbar" style="justify-content:space-between;margin-top:18px"></div><div class="selection"><b class="small"><span id="selN">0</span> ürün seçili</b><button class="chip on" onclick="printLabels()">Barkod yazdır</button><button class="chip" onclick="SEL.clear();drawInv()">Seçimi temizle</button></div>
 <details><summary>Barkod yazdırma ayarları</summary><div class="toolbar"><select id="labelRows" style="width:auto"><option value="8">İnce · 2×8 (16 etiket)</option><option value="7" selected>İnce · 2×7 (14 etiket)</option><option value="6">Orta · 2×6 (12 etiket)</option><option value="5">Kalın · 2×5 (10 etiket)</option><option value="4">Kalın · 2×4 (8 etiket)</option></select><label>Başlangıç <input id="labelStart" type="number" min="1" value="1" style="width:75px" aria-label="İlk etiket numarası"></label><label class="rowcheck"><input type="checkbox" id="labelPhoto">Fotoğraflı</label></div><p class="small">4×6 inç kargo etiketi, 2 sütun. %100 ölçekte yazdır. Başlangıç numarası yarım kalan sayfayı kullanır.</p></details><div id="tagEdit" hidden></div></div>
@@ -40,15 +40,12 @@ Earrings | 5 | EAR
 Necklace | 5 | NECK
 5 Bracelets | 5 | BRAC5
 Bracelet | 15 | BRAC1
-Sunglasses | 10 | SUN
 Shawl | 40 | SHAWL
 Hat | 35 | HAT
 Socks | 5 | SOCK5
 Socks | 8 | SOCK8
 Gloves |  | GLOVE
 Figurine |  | FIG
-Turkish Towel, Large | 25 | TWL-L
-Turkish Towel, Small | 15 | TWL-S
 Oya Headscarf | 40 | OYA
 $15 Rack Item | 15 | RACK15</textarea><div class="toolbar" style="margin-top:16px"><button class="btn" onclick="genCreate()">Square’da oluştur</button><button class="btn alt" onclick="genPrint()">A4 barkod sayfası yazdır</button></div><div id="genInfo" class="small"></div></div></section>
 </main></div><div class="toast" id="toast" role="status"></div>
@@ -87,10 +84,11 @@ async function refreshInventory(items) {
   try{return await REFRESHING;}finally{REFRESHING=null;}
 }
 function itemState(x) {
+  const q=QUEUE.find(r=>r.item_id===x.id);
+  if(q?.status==="archived")return {key:"archived",label:"Kaldırıldı",tone:"muted"};
   if(x.sku.startsWith("HC-G-"))return {key:"store",label:"Mağazaya özel",tone:"muted"};
   if(x.qty<=0)return {key:"sold",label:"Stok yok",tone:"muted"};
   if(!x.images.length)return {key:"noPhoto",label:"Fotoğraf eksik",tone:"warn"};
-  const q=QUEUE.find(r=>r.item_id===x.id);
   if(q && !(q.status==="approved" && q.publish_at && Date.parse(q.publish_at)<=Date.now()))return {key:"draft",label:q.status==="draft"?"Yayın onayı bekliyor":"Yayın tarihi bekleniyor",tone:"warn"};
   if(PUBLIC_IDS===null)return {key:"unknown",label:"Görünürlük doğrulanamadı",tone:"muted"};
   return PUBLIC_IDS.has(x.id)?{key:"live",label:"Sitede satışta",tone:""}:{key:"hidden",label:"Görünmüyor · kontrol et",tone:"warn"};
@@ -101,7 +99,7 @@ function openInventory(filter="all",search=""){INV_PAGE=1;$("#invStatus").value=
 async function loadHome(items) {
   $("#homeError").innerHTML="";
   try {
-    const r=await refreshInventory(items),stock=INV.filter(x=>x.qty>0&&!x.sku.startsWith("HC-G-")),hidden=INV.filter(hiddenActive),sold=INV.filter(x=>x.qty<=0&&!x.sku.startsWith("HC-G-"));
+    const r=await refreshInventory(items),stock=INV.filter(x=>x.qty>0&&!x.sku.startsWith("HC-G-")&&itemState(x).key!=="archived"),hidden=INV.filter(hiddenActive),sold=INV.filter(x=>x.qty<=0&&!x.sku.startsWith("HC-G-")&&itemState(x).key!=="archived");
     const metrics=[{label:"Stokta ürün",n:stock.length,note:"Square envanteri",filter:"stock"},{label:"Sitede satışta",n:PUBLIC_IDS===null?"—":PUBLIC_IDS.size,note:"Müşterinin görebildiği",filter:"live"},{label:"Sitede görünmeyen",n:PUBLIC_IDS===null?"—":hidden.length,note:"Fotoğraf veya yayın eksik",filter:"hidden",warn:true},{label:"Stokta olmayan",n:sold.length,note:"Satılmış / stok sıfır",filter:"sold"}];
     $("#metrics").innerHTML=metrics.map(m=>`<button class="metric ${m.warn?"warn":""}" onclick="openInventory('${m.filter}')"><span>${m.label}</span><strong>${m.n}</strong><small>${m.note}</small></button>`).join("");
     $("#missingN").textContent=PUBLIC_IDS===null?"?":hidden.length;
@@ -143,6 +141,7 @@ async function loadInv() {
 function drawInv() {
   const f=$("#filter").value.trim().toLocaleLowerCase(),status=$("#invStatus").value;
   const rows=INV.filter(x=>{
+    if(itemState(x).key==="archived"&&status!=="archived")return false;
     if(f && !(x.title+" "+x.sku).toLocaleLowerCase().includes(f))return false;
     if(status==="all")return true;if(status==="stock")return x.qty>0&&!x.sku.startsWith("HC-G-");if(status==="hidden")return hiddenActive(x);
     if(status==="consign")return /^HC-K-/.test(x.sku);
@@ -151,9 +150,10 @@ function drawInv() {
   $("#invCount").textContent=`${rows.length} / ${INV.length} ürün`;
   const pages=Math.max(1,Math.ceil(rows.length/24));INV_PAGE=Math.min(INV_PAGE,pages);
   $("#invPager").innerHTML=pages>1?`<span class="small">Sayfa ${INV_PAGE} / ${pages}</span><div style="display:flex;gap:8px"><button class="chip" ${INV_PAGE===1?"disabled":""} onclick="INV_PAGE--;drawInv();document.querySelector('#t-inv').scrollIntoView({block:'start'})">← Önceki</button><button class="chip" ${INV_PAGE===pages?"disabled":""} onclick="INV_PAGE++;drawInv();document.querySelector('#t-inv').scrollIntoView({block:'start'})">Sonraki →</button></div>`:"";
-  $("#inv").innerHTML=rows.slice((INV_PAGE-1)*24,INV_PAGE*24).map(x=>`<div class="row"><label class="rowcheck"><input aria-label="${esc(x.title)} seç" type="checkbox" ${SEL.has(x.id)?"checked":""} onchange="this.checked?SEL.add('${x.id}'):SEL.delete('${x.id}');$('#selN').textContent=SEL.size">${x.images[0]?`<img src="${esc(x.images[0])}" alt="" loading="lazy">`:'<div class="noimg" aria-hidden="true">▧</div>'}</label><div><div class="producttitle">${esc(x.title)}</div><div class="small">${esc(x.sku)}${x.size?" · "+esc(x.size):""} · ${x.images.length} fotoğraf${/^HC-K-/.test(x.sku)?" · Konsinye":""}${PRINTED().has(x.id)?" · Barkod basıldı":""}</div><div class="productmeta"><span class="productprice">${money(x.price)}</span>${badge(x)}</div></div><div class="actions">${x.qty>0?`<button class="chip" onclick="markSold(['${x.id}'])">Satıldı</button><button class="chip" onclick="forFlyp('${x.id}')">Flyp’e kopyala</button>`:""}<label class="chip">＋ Fotoğraf<input aria-label="${esc(x.title)} fotoğraf ekle" type="file" accept="image/*" multiple hidden onchange="addPhotos('${x.item_id}','${esc(x.sku)}',this)"></label></div></div>`).join("")||'<div class="empty">Bu filtreye uygun ürün bulunamadı.</div>';
+  $("#inv").innerHTML=rows.slice((INV_PAGE-1)*24,INV_PAGE*24).map(x=>`<div class="row"><label class="rowcheck"><input aria-label="${esc(x.title)} seç" type="checkbox" ${SEL.has(x.id)?"checked":""} onchange="this.checked?SEL.add('${x.id}'):SEL.delete('${x.id}');$('#selN').textContent=SEL.size">${x.images[0]?`<img src="${esc(x.images[0])}" alt="" loading="lazy">`:'<div class="noimg" aria-hidden="true">▧</div>'}</label><div><div class="producttitle">${esc(x.title)}</div><div class="small">${esc(x.sku)}${x.size?" · "+esc(x.size):""} · ${x.images.length} fotoğraf${/^HC-K-/.test(x.sku)?" · Konsinye":""}${PRINTED().has(x.id)?" · Barkod basıldı":""}</div><div class="productmeta"><span class="productprice">${money(x.price)}</span>${badge(x)}</div></div><div class="actions">${itemState(x).key==="archived"?`<button class="chip" onclick="restoreArchived('${x.id}')">Geri getir</button>`:x.qty>0?`<button class="chip" onclick="markSold(['${x.id}'])">Satıldı</button><button class="chip" onclick="forFlyp('${x.id}')">Flyp’e kopyala</button>`:""}<label class="chip">＋ Fotoğraf<input aria-label="${esc(x.title)} fotoğraf ekle" type="file" accept="image/*" multiple hidden onchange="addPhotos('${x.item_id}','${esc(x.sku)}',this)"></label></div></div>`).join("")||'<div class="empty">Bu filtreye uygun ürün bulunamadı.</div>';
   $("#selN").textContent=SEL.size;
 }
+async function restoreArchived(id){try{await A("admin_queue_set",{ids:[id],mode:"now"});toast("Ürün geri getirildi");await loadInv();}catch(e){toast(e.message);}}
 async function repairPhotos() {
   let rows;try{rows=JSON.parse($("#photoPackage").value);if(!Array.isArray(rows)||!rows.length||rows.length>50)throw Error("1–50 ürünlük bir JSON listesi kullan.");}catch(e){$("#photoRepairInfo").textContent=e.message;return;}
   $("#photoRepair").disabled=true;const results=[];
@@ -423,7 +423,7 @@ async function aerialRender() {
 }
 let PUB = [];
 async function loadPub() { $("#pubStart").value ||= new Date(Date.now() + 864e5).toISOString().slice(0, 10); $("#pubList").innerHTML = "<p class='small'>Yükleniyor…</p>";
-  try { PUB = (await A("admin_queue")).rows; } catch (e) { $("#pubList").innerHTML = `<p class="small">${esc(e.message)}</p>`; return; }
+  try { PUB = (await A("admin_queue")).rows.filter(r=>r.status!=="archived"); } catch (e) { $("#pubList").innerHTML = `<p class="small">${esc(e.message)}</p>`; return; }
   $("#pubList").innerHTML = PUB.length ? PUB.map((r) => { const x = r.item, live = r.status === "approved" && Date.parse(r.publish_at) <= Date.now();
     return `<div class="row">${r.status === "draft" ? `<input type="checkbox" class="pq" value="${r.item_id}" style="width:auto">` : "<span></span>"}<div>${esc(x.title)}<div class="small">${money(x.price)} · ${r.status === "draft" ? "<b>yayın onayı bekliyor</b>" : live ? "yayında" : "yayına çıkış " + new Date(r.publish_at).toLocaleDateString()}</div></div><span></span></div>`; }).join("") : "<p class='small'>Yayın bekleyen ürün yok.</p>"; }
 async function pubSet(mode) { const ids = [...document.querySelectorAll(".pq:checked")].map((c) => c.value); if (!ids.length) return toast("Önce ürün seç");
