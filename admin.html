@@ -1,72 +1,41 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex"><title>Heron Admin</title><link rel="icon" href="/assets/heron-ca.png">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&family=Jost:wght@400;500&display=swap" rel="stylesheet">
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Heron · Yönetim</title><link rel="icon" href="/assets/heron-ca.png">
 <link rel="stylesheet" href="/assets/heron.css?v=13">
 <style>
-#impStop[hidden],#impDownload[hidden]{display:none}
-.tabs{display:flex;gap:6px;margin:18px 0}
-label{display:block;margin:12px 0 4px}
-input,select,textarea{width:100%;font:inherit;padding:11px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:0}
-textarea{min-height:110px}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.thumbs img{width:72px;aspect-ratio:4/5;object-fit:cover}
-.inv{display:grid;gap:10px}.inv .row{grid-template-columns:56px 1fr auto;border-bottom:1px solid var(--line);padding-bottom:10px}
-.inv .row img,.inv .noimg{width:56px;aspect-ratio:4/5;object-fit:cover;background:var(--cream)}
-.note{background:var(--cream);padding:10px 12px;margin:10px 0}
-</style></head>
-<body><main class="wrap" style="max-width:640px;padding-bottom:60px">
-<div class="bar"><img src="/assets/heron-wordmark.png" alt="Heron" style="height:22px"><span class="caps">Admin</span></div>
-
-<div id="login"><label>Password</label><input id="pw" type="password" autocomplete="current-password">
-<button class="btn" style="margin-top:12px" onclick="login()">Enter</button></div>
-
-<div id="app" hidden>
-<div class="tabs"><button class="chip on" data-t="add">Add item</button><button class="chip" data-t="inv">Inventory</button><button class="chip" data-t="imp">Import eBay</button><button class="chip" data-t="pub">Publish</button><button class="chip" data-t="off">Offers</button><button class="chip" data-t="cat">Catalog</button><button class="chip" data-t="rec">Receipts</button></div>
-
-<section id="t-add">
-  <label>Photos (first one is the cover)</label><input id="photos" type="file" accept="image/*" multiple>
-  <div class="thumbs" id="thumbs"></div>
-  <label>Title</label><input id="title" placeholder="Vince Silk Slip Dress, Black">
-  <div class="two"><div><label>Category</label><select id="category"></select></div>
-  <div><label>Size</label><input id="size" placeholder="M"></div></div>
-  <div class="two"><div><label>Store price ($)</label><input id="price" type="number" inputmode="decimal" step="0.01"></div>
-  <div><label>Condition</label><select id="cond"><option>New with tags</option><option>New without tags</option><option selected>Pre-owned, excellent</option><option>Pre-owned, good</option><option>Vintage</option></select></div></div>
-  <div class="small" id="siteprice"></div>
-  <label>Description</label><textarea id="desc" placeholder="Fabric, measurements, details"></textarea>
-  <button class="btn alt" style="margin-top:8px" disabled title="Turn on later">Write with AI (coming soon)</button>
-  <label style="display:flex;gap:8px;align-items:center;margin-top:14px"><input type="checkbox" id="consign" style="width:auto"> Consignment piece (50% goes to the owner, SKU starts HC-K)</label>
-  <label>SKU (leave empty for automatic)</label><input id="sku" placeholder="HC-V-DR-0001">
-  <button class="btn" style="margin-top:16px" id="save" onclick="save()">Save to Square and the site</button>
-</section>
-
-<section id="t-inv" hidden><div class="note small">Items without photos are hidden on the site. Add photos to show them.</div>
-  <input id="filter" placeholder="Search title or SKU" oninput="drawInv()">
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0"><button class="chip" onclick="selNew()">Select not printed yet</button><button class="chip" onclick="SEL.clear();drawInv()">Clear</button><select id="labelRows" class="chip" style="width:auto"><option value="8">Thin · 2×8 (16 per sheet)</option><option value="7" selected>Thin · 2×7 (14)</option><option value="6">Medium · 2×6 (12)</option><option value="5">Thick · 2×5 (10)</option><option value="4">Thick · 2×4 (8)</option></select><input id="labelStart" type="number" min="1" value="1" class="chip" style="width:70px" title="Start at label # (to use a half-used sheet)"><label class="chip" style="margin:0;display:flex;gap:6px;align-items:center;width:auto"><input type="checkbox" id="labelPhoto" style="width:auto;margin:0"> Photo</label><button class="chip on" onclick="printLabels()">Print labels (<span id="selN">0</span>)</button></div>
-  <div id="tagEdit" hidden style="border:1px solid #ddd;border-radius:8px;padding:10px;margin:8px 0"></div>
-  <div class="small">Prints on a 4x6 in shipping label, 2 columns. Cut along the dotted lines. "Start at" lets you use the rest of a half-used sheet (labels are counted left to right, top to bottom). Print at 4x6 in, scale 100%.</div>
-  <div class="inv" id="inv" style="margin-top:12px"></div></section>
-
-<section id="t-pub" hidden>
-  <div class="note small">Pieces you add with <b>Add item</b> wait here until you approve them. Publish now, or spread them out so something new goes live every day.</div>
-  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:10px 0"><button class="chip" onclick="document.querySelectorAll('.pq').forEach((c) => c.checked = true)">Select all drafts</button>
-  <button class="chip on" onclick="pubSet('now')">Publish now</button>
-  <span class="small">or</span><input id="pubPer" type="number" value="1" min="1" style="width:60px" class="chip"><span class="small">per day from</span><input id="pubStart" type="date" class="chip" style="width:auto"><button class="chip on" onclick="pubSet('daily')">Schedule</button></div>
-  <div class="inv" id="pubList"></div></section>
-<section id="t-off" hidden><div class="note small">Bundle offers and price requests from the bag. Accept to create a payment link, then email it to the customer.</div><div id="offList" class="inv"></div></section>
-<section id="t-rec" hidden>
-  <div class="note small"><b>Cash sale / manual receipt.</b> Scan a barcode (or type a SKU) and press Enter, or add a line by hand. "Mark sold" takes the pieces off the site and stock. Every receipt you print is kept as a copy (outside Square) and listed below.</div>
-  <input id="recScan" placeholder="Scan barcode or type SKU, then Enter">
-  <div style="display:grid;grid-template-columns:1fr 100px auto;gap:6px;margin-top:6px"><input id="recName" placeholder="Manual line, e.g. Shipping"><input id="recPrice" type="number" step="0.01" placeholder="$"><button class="chip" onclick="recAddManual()">Add</button></div>
-  <div id="recLines" class="inv" style="margin:10px 0"></div>
-  <div style="display:flex;gap:6px;align-items:center"><select id="recMethod" style="width:auto"><option>Cash</option><option>Card (POS)</option><option>Other</option></select><input id="recNote" placeholder="Note (optional)"></div>
-  <div style="display:grid;gap:8px;margin-top:8px"><button class="btn" onclick="recSave(true)">Mark sold + print receipt</button><button class="btn alt" onclick="recSave(false)">Print receipt only (sale already in Square)</button></div>
-  <h3 class="serif" style="margin:28px 0 6px">Recent Square payments</h3><div id="recSq" class="inv"></div>
-  <h3 class="serif" style="margin:28px 0 6px">Printed receipts</h3><button class="chip" onclick="recCsv()">Download CSV</button><div id="recCash" class="inv" style="margin-top:8px"></div>
-</section>
-<section id="t-cat" hidden>
-  <div class="note small"><b>Store catalog</b>: small things sold in the shop only (jewelry, towels, scarves…). One barcode per line, scan it from the printed A4 sheet at the register. Not shown on the website, stock not counted. One line each: <i>Name | price | CODE</i>. Leave the price empty to type the price at the register.</div>
-  <textarea id="gen" style="min-height:300px;font-family:monospace;font-size:13px">2 Rings | 5 | RING2
+:root{--ink:#262b29;--muted:#69716d;--line:#e3e7e2;--paper:#f5f6f2;--cream:#f1f3ed;--green:#2c5948;--warn:#986522}
+[hidden]{display:none!important}body{font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--paper);color:var(--ink)}button,input,select,textarea{font:inherit}button,a,label.chip,summary{touch-action:manipulation}button{cursor:pointer}button:disabled{opacity:.45;cursor:default}button:active:not(:disabled){transform:scale(.98)}:focus-visible{outline:3px solid #87aa99;outline-offset:3px}a{text-underline-offset:3px}h1,h2,h3,p{margin:0}h1{font-size:29px;font-weight:650;letter-spacing:-.7px}h2{font-size:18px;font-weight:650}h3{font-size:15px;font-weight:600}.small{font-size:12px;color:var(--muted)}
+.shell{display:grid;grid-template-columns:218px minmax(0,1fr);min-height:100vh}.sidebar{position:sticky;top:0;height:100vh;background:#fff;border-right:1px solid var(--line);padding:29px 16px;display:flex;flex-direction:column}.brand{padding:0 13px 25px}.brand img{width:116px;height:auto}.brand span{display:block;margin-top:9px;font-size:11px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}.navgroup{font-size:10px;font-weight:650;letter-spacing:.12em;color:#8b928e;padding:25px 13px 8px;text-transform:uppercase}.tabs{display:grid;gap:4px}.tabs button{display:flex;align-items:center;gap:11px;border:0;border-radius:7px;text-align:left;padding:11px 13px;background:none;color:var(--muted);font-weight:500;white-space:nowrap}.tabs button.on{background:#eaf0ea;color:var(--green);font-weight:650}.tabs button:hover{background:#f2f4ef}.navicon{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:18px}.sidefoot{margin-top:auto;padding:25px 13px 0}.sidefoot a{font-size:12px;color:var(--muted)}.workspace{padding:30px 40px 70px;max-width:1360px;width:100%;margin:auto}.topbar{display:flex;justify-content:space-between;align-items:center;padding-bottom:24px;border-bottom:1px solid var(--line);margin-bottom:29px;color:var(--muted);font-size:12px}.topbar .dot{display:inline-block;background:var(--green);width:6px;height:6px;border-radius:50%;margin-right:6px}.pagehead{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:26px}.pagehead p{color:var(--muted);margin-top:7px;max-width:630px}.btn,.chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;width:auto;border-radius:6px;font-size:13px;padding:10px 16px;border:1px solid var(--line);background:#fff;white-space:normal;letter-spacing:0;text-transform:none;color:var(--ink)}.btn,.chip.on{background:var(--green);color:white;border-color:var(--green)}.btn.alt{background:#fff;color:var(--ink);border-color:var(--line)}.chip{padding:7px 11px;font-size:12px}.quiet{background:none;border:0;color:var(--green);font-size:13px;padding:4px 0}.panel{background:#fff;border:1px solid var(--line);border-radius:10px;padding:23px;margin-bottom:20px}.panelhead{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px}.panelhead p{margin-top:4px}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:25px}.metric{background:#fff;border:1px solid var(--line);border-radius:9px;padding:19px;text-align:left;color:var(--ink)}.metric span{display:block;color:var(--muted);font-size:12px}.metric strong{display:block;font-size:33px;line-height:1.2;margin:11px 0 7px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-1px}.metric.warn strong{color:var(--warn)}.metric small{font-size:11px;color:var(--muted)}.homegrid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}.statusline{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 0;border-bottom:1px solid var(--line)}.statusline:last-child{border-bottom:0}.badge{display:inline-flex;position:static;border-radius:4px;background:#eaf2eb;color:var(--green);padding:3px 7px;font-size:11px;white-space:nowrap;font-weight:500}.badge.warn{background:#fbf0da;color:var(--warn)}.badge.muted{background:#f0f1ef;color:var(--muted)}.note{background:#f1f4ed;border:1px solid #e2e8dc;padding:13px 15px;border-radius:7px;margin:12px 0;color:#51624f}.note.warning{background:#fff8eb;border-color:#f0dfb8;color:#886022}.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:19px}.toolbar input{flex:1;min-width:180px}.toolbar select{width:auto;min-width:170px}.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}.formbody{max-width:780px}.formgroup{margin:0 0 25px}label{display:block;font-size:12px;font-weight:550;margin:16px 0 6px}input,select,textarea{width:100%;font:inherit;padding:10px 12px;min-height:41px;border:1px solid #d8ded7;background:#fff;color:var(--ink);border-radius:6px}input[type=checkbox]{width:16px;min-height:16px;accent-color:var(--green)}input[type=file]{font-size:12px;background:#fafbf8;padding:12px}textarea{min-height:125px;resize:vertical}.thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.thumbs img{width:72px;aspect-ratio:4/5;object-fit:cover;border-radius:5px}.inv{display:grid;gap:0}.inv .row{display:grid;grid-template-columns:80px minmax(0,1fr) auto;gap:17px;align-items:center;border-bottom:1px solid var(--line);padding:16px 0}.inv .row:last-child{border-bottom:0}.inv .row img,.inv .noimg{width:52px;height:66px;object-fit:cover;border-radius:5px;background:#f0f2ec}.inv .noimg{display:flex;align-items:center;justify-content:center;color:#98a098;font-size:22px}.producttitle{font-size:13px;font-weight:550;margin-bottom:4px}.productmeta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px}.productprice{font-variant-numeric:tabular-nums;font-size:15px;font-weight:600}.actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap;max-width:210px}.actions label{margin:0;cursor:pointer}.rowcheck{display:flex;gap:10px;align-items:center;margin:0}.selection{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:12px 0;border-top:1px solid var(--line)}details{border-top:1px solid var(--line);padding-top:15px;margin-top:16px}summary{cursor:pointer;font-size:12px;color:var(--muted);font-weight:500}details[open] summary{margin-bottom:13px}.empty{padding:32px 12px;text-align:center;color:var(--muted)}.error{color:#9c3a2c}.attentionrow{display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:12px;padding:14px 0;border-top:1px solid var(--line);align-items:center}.attentionrow .placeholder{width:36px;height:45px;border-radius:4px;background:#f0f2eb;display:grid;place-items:center;color:#9aa296}.attentionrow p{font-size:12px;font-weight:500}.attentionrow small{font-size:11px;color:var(--muted)}.stepnumber{border:1px solid var(--line);border-radius:50%;width:25px;height:25px;display:inline-grid;place-items:center;font-size:12px;margin-right:8px}.loginbox{max-width:370px;margin:14vh auto;background:#fff;padding:30px;border:1px solid var(--line);border-radius:10px}.loginbox img{width:130px;margin-bottom:28px}.loginbox h1{font-size:22px}.toast{font:13px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;max-width:min(500px,92vw);border-radius:8px;z-index:100}.importresult{padding:12px 0;border-bottom:1px solid var(--line)}.importresult b{font-size:13px}.importresult small{display:block;margin-top:5px}.footerhint{font-size:11px;color:var(--muted);margin-top:16px}
+@media(max-width:1100px){.workspace{padding:25px 25px 60px}.homegrid{grid-template-columns:1fr}.connectiongrid{display:grid;grid-template-columns:1fr 1fr;gap:0 25px}}
+@media(max-width:760px){.shell{display:block}.sidebar{position:static;height:auto;padding:17px 15px 0;border-right:0;border-bottom:1px solid var(--line)}.brand{padding:0 1px 15px;display:flex;gap:12px;align-items:center}.brand img{width:90px}.brand span{margin:0;font-size:10px}.tabs{display:flex;overflow-x:auto;padding-bottom:12px;gap:5px}.tabs button{padding:9px 11px;font-size:12px}.navgroup,.navicon,.sidefoot{display:none}.workspace{padding:20px 16px 45px}.topbar{padding-bottom:16px;margin-bottom:22px;font-size:11px}.pagehead{margin-bottom:20px;gap:10px}.pagehead h1{font-size:24px}.pagehead p{font-size:12px}.pagehead>.btn{font-size:12px;padding:9px 12px;flex:none}.metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.metric{padding:15px}.metric strong{font-size:30px}.panel{padding:17px}.panelhead{align-items:flex-start}.homegrid{gap:0}.connectiongrid{display:block}.two{gap:10px}.inv .row{grid-template-columns:68px minmax(0,1fr);gap:10px}.actions{grid-column:2;justify-content:flex-start;max-width:none}.attentionrow{grid-template-columns:34px minmax(0,1fr)}.attentionrow>.badge{grid-column:2;justify-self:start;margin-top:-5px}.toolbar select{flex:1}.topbar a{font-size:11px}.loginbox{margin:12vh 20px}.selection{gap:7px}.btn{max-width:100%}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style></head><body>
+<div id="login" class="loginbox"><img src="/assets/heron-wordmark.png" alt="Heron"><h1>Mağaza yönetimi</h1><p class="small" style="margin-top:8px">Ürünler, stok ve satışlar tek yerde.</p><label for="pw">Yönetici şifresi</label><input id="pw" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"><button id="loginBtn" class="btn" style="width:100%;margin-top:18px" onclick="login()">Giriş yap</button><p id="loginError" class="small error" role="alert" style="margin-top:10px"></p></div>
+<div id="app" class="shell" hidden>
+<aside class="sidebar"><div class="brand"><img src="/assets/heron-wordmark.png" alt="Heron"><span>Mağaza yönetimi</span></div>
+<nav class="tabs" aria-label="Yönetim menüsü">
+<button class="on" data-t="home"><span class="navicon" aria-hidden="true">◫</span>Genel bakış</button><button data-t="inv"><span class="navicon" aria-hidden="true">▦</span>Ürünler</button><button data-t="add"><span class="navicon" aria-hidden="true">＋</span>Ürün ekle</button><button data-t="imp"><span class="navicon" aria-hidden="true">⇣</span>eBay aktarımı</button><button data-t="sales"><span class="navicon" aria-hidden="true">↗</span>Satışlar</button>
+<div class="navgroup">Mağaza</div><button data-t="pub"><span class="navicon" aria-hidden="true">◷</span>Yayın sırası</button><button data-t="off"><span class="navicon" aria-hidden="true">◇</span>Teklifler</button><button data-t="rec"><span class="navicon" aria-hidden="true">▤</span>Kasa ve fişler</button><button data-t="settings"><span class="navicon" aria-hidden="true">⚙</span>Ayarlar</button></nav>
+<div class="sidefoot"><a href="/" target="_blank" rel="noopener">Mağazayı görüntüle ↗</a><p class="small" style="margin-top:12px">heronca.com · heronca.shop</p></div></aside>
+<main class="workspace"><div class="topbar"><span><span class="dot"></span>HERON CA <span style="color:#a1a7a0;margin:0 8px">/</span> Yönetim paneli</span><a href="/" target="_blank" rel="noopener">Siteyi aç ↗</a></div>
+<section id="t-home"><div class="pagehead"><div><h1>Genel bakış</h1><p>Mağazanın durumu ve ilgilenmen gereken ürünler.</p></div><button class="btn" onclick="navigate('add')">＋ Ürün ekle</button></div>
+<div id="homeError" role="alert"></div><div class="metrics" id="metrics"><div class="metric"><span>Ürünler yükleniyor…</span><strong>—</strong></div></div>
+<div class="homegrid"><div class="panel"><div class="panelhead"><div><h2>Sitede görünmeyen ürünler <span class="badge warn" id="missingN">—</span></h2><p class="small">Stokta olup satışa çıkamayan ürünler.</p></div><button class="quiet" onclick="openInventory('hidden')">Tümünü gör →</button></div><div id="attentionList"><p class="small">Kontrol ediliyor…</p></div></div>
+<div class="panel"><h2>Bağlantılar</h2><div class="connectiongrid"><div class="statusline"><div><b>Square</b><p class="small">Ürün ve stok kaynağı</p></div><span id="squareBadge" class="badge muted">Kontrol ediliyor</span></div><div class="statusline"><div><b>eBay API</b><p class="small">Resmî satıcı bağlantısı</p></div><span id="ebayBadge" class="badge warn">Bağlı değil</span></div><div class="statusline"><div><b>Flyp</b><p class="small">Chrome ve Mac açık kalmalı</p></div><a class="quiet" href="https://tools.joinflyp.com/my-items" target="_blank" rel="noopener">Aç ↗</a></div></div><p class="footerhint">Kanallar arasında otomatik stok eşitleme henüz kurulu değil. Satılanları Satışlar bölümünden işleyebilirsin.</p></div></div><p id="lastRefresh" class="footerhint"></p></section>
+<section id="t-inv" hidden><div class="pagehead"><div><h1>Ürünler</h1><p>Görünürlük, fotoğraf, stok ve barkod işlemleri.</p></div><button class="btn alt" onclick="loadInv()">Yenile</button></div>
+<div class="panel"><div class="toolbar"><input id="filter" aria-label="Ürün ara" placeholder="Ürün adı veya SKU ile ara…" oninput="drawInv()"><select id="invStatus" aria-label="Ürün durumu" onchange="drawInv()"><option value="all">Tüm ürünler</option><option value="live">Sitede satışta</option><option value="hidden">Sitede görünmeyen</option><option value="noPhoto">Fotoğrafı eksik</option><option value="draft">Yayın bekleyen</option><option value="sold">Stokta olmayan</option><option value="consign">Konsinye</option><option value="store">Mağazaya özel</option></select></div>
+<div style="display:flex;justify-content:space-between;gap:15px"><span id="invCount" class="small"></span><button class="quiet" onclick="selNew()">Barkodu basılmayanları seç</button></div>
+<div class="inv" id="inv"></div><div class="selection"><b class="small"><span id="selN">0</span> ürün seçili</b><button class="chip on" onclick="printLabels()">Barkod yazdır</button><button class="chip" onclick="SEL.clear();drawInv()">Seçimi temizle</button></div>
+<details><summary>Barkod yazdırma ayarları</summary><div class="toolbar"><select id="labelRows" style="width:auto"><option value="8">İnce · 2×8 (16 etiket)</option><option value="7" selected>İnce · 2×7 (14 etiket)</option><option value="6">Orta · 2×6 (12 etiket)</option><option value="5">Kalın · 2×5 (10 etiket)</option><option value="4">Kalın · 2×4 (8 etiket)</option></select><label>Başlangıç <input id="labelStart" type="number" min="1" value="1" style="width:75px" aria-label="İlk etiket numarası"></label><label class="rowcheck"><input type="checkbox" id="labelPhoto">Fotoğraflı</label></div><p class="small">4×6 inç kargo etiketi, 2 sütun. %100 ölçekte yazdır. Başlangıç numarası yarım kalan sayfayı kullanır.</p></details><div id="tagEdit" hidden></div></div>
+<details class="panel"><summary>Fotoğrafları toplu tamamla</summary><p class="small">SKU ve ürün adı eşleşen mevcut kayıtlara fotoğraf ekler. Stok ve fiyatları değiştirmez; fotoğrafı olanları atlar.</p><label for="photoPackage">Fotoğraf eşleştirme paketi (JSON)</label><textarea id="photoPackage" spellcheck="false" placeholder='[{"sku":"HC-V-…","title":"…","images":["https://…"]}]'></textarea><button id="photoRepair" class="btn" onclick="repairPhotos()">Eşleşen fotoğrafları ekle</button><div id="photoRepairInfo" class="small" role="status" style="margin-top:12px"></div></details></section>
+<section id="t-add" hidden><div class="pagehead"><div><h1>Ürün ekle</h1><p>Square’a kaydedilir. Siteye çıkarmak için Yayın sırası bölümünden onayla.</p></div></div><div class="formbody"><div class="panel"><h2>Fotoğraflar</h2><label for="photos">İlk fotoğraf ürünün kapak görselidir</label><input id="photos" type="file" accept="image/*" multiple><div class="thumbs" id="thumbs"></div></div><div class="panel"><h2>Ürün bilgileri</h2><label for="title">Ürün adı</label><input id="title" placeholder="Vince Silk Slip Dress, Black"><div class="two"><div><label for="category">Kategori</label><select id="category"></select></div><div><label for="size">Beden</label><input id="size" placeholder="M"></div></div><div class="two"><div><label for="price">Mağaza ve site fiyatı ($)</label><input id="price" type="number" inputmode="decimal" step="0.01" min="0.01"></div><div><label for="cond">Ürün durumu</label><select id="cond"><option value="New with tags">Etiketli yeni</option><option value="New without tags">Etiketsiz yeni</option><option value="Pre-owned, excellent" selected>İkinci el · çok iyi</option><option value="Pre-owned, good">İkinci el · iyi</option><option value="Vintage">Vintage</option></select></div></div><p class="small" id="siteprice" style="margin-top:10px"></p><label for="desc">Açıklama</label><textarea id="desc" placeholder="Kumaş, ölçüler, detaylar…"></textarea><details><summary>Konsinye ve özel SKU</summary><label class="rowcheck"><input type="checkbox" id="consign">Konsinye · %50 ürün sahibine, HC-K ile başlayan SKU</label><label for="sku">SKU · otomatik oluşturulması için boş bırak</label><input id="sku" placeholder="HC-V-DR-0001"></details></div><button class="btn" id="save" onclick="save()">Ürünü kaydet</button></div></section>
+<section id="t-imp" hidden><div class="pagehead"><div><h1>eBay aktarımı</h1><p>Aktif ilanları mevcut Square ürünleriyle eşleştir ve eksikleri tamamla.</p></div></div><div id="ebayStatus" class="note warning" role="status">eBay bağlantısı kontrol ediliyor…</div><div class="panel"><h2><span class="stepnumber">1</span>Aktif ilan dosyasını seç</h2><p class="small" style="margin:10px 0 15px">eBay → Reports → Active listings CSV. Mevcut fiyat ve stok korunur. Yeni fiyatlar eBay fiyatının 1,30’a bölünmesiyle hesaplanır.</p><input id="csv" type="file" accept=".csv" aria-label="eBay aktif ilan CSV dosyası"><details><summary>CSV metnini yapıştır</summary><label for="csvText">Sütun başlıkları dahil tüm CSV içeriği</label><textarea id="csvText" spellcheck="false" placeholder="Item number,Title,Available quantity,Currency,Current price…"></textarea><button class="btn alt" id="csvRead" onclick="loadImportCSV($('#csvText').value)">Dosyayı incele</button></details></div><div class="panel"><h2><span class="stepnumber">2</span>Kontrol et ve aktar</h2><div id="impInfo" class="small" role="status" style="margin:15px 0">Başlamak için bir CSV dosyası seç.</div><details id="conAsk" hidden><summary>Bu dosyada konsinye ürün var mı?</summary><p class="small">Varsa işaretle. HC-K SKU oluşturulur, %50 ürün sahibine ayrılır.</p><div id="conList" style="max-height:260px;overflow:auto;margin-top:8px"></div></details><div class="toolbar" style="margin:18px 0 0"><button class="btn" id="impGo" disabled onclick="runImport()">Aktar / başarısızları yeniden dene</button><button class="btn alt" id="impStop" hidden onclick="IMPORT_STOP=true;this.disabled=true">Bu üründen sonra durdur</button><button class="btn alt" id="picGo" disabled onclick="runPhotos()">Eksik kapakları yeniden dene</button></div><p class="footerhint">İşlem boyunca bu sayfayı açık tut. Fotoğraf alınamayan ürünler aşağıda hata nedeni ile görünür.</p></div><div class="panel"><div class="panelhead"><h2><span class="stepnumber">3</span>Sonuçlar</h2><button class="chip" id="impDownload" hidden onclick="downloadImportResults()">Sonuçları indir</button></div><div id="impResults" aria-live="polite"><p class="small">Aktarım sonuçları burada görünecek.</p></div></div></section>
+<section id="t-sales" hidden><div class="pagehead"><div><h1>Satışlar</h1><p>Başka kanalda satılan ürünlerin site ve Square stoklarını güncelle.</p></div></div><div class="panel formbody"><h2>Flyp satış raporunu işle</h2><p class="small" style="margin:10px 0 18px">Flyp’ten indirdiğin XLSX veya CSV satış raporunu seç. Önce eşleşmeleri gösterir; onayladığında stok düşer.</p><input id="sales" type="file" accept=".xlsx,.csv" aria-label="Flyp satış raporu"><div id="salesInfo" class="small" role="status" style="margin-top:15px"></div><div id="salesReview" class="inv"></div><button id="salesApply" class="btn" hidden onclick="applySales()" style="margin-top:16px">Eşleşenleri satıldı işaretle</button></div><div class="note small">Sitede veya Square’da satılan bir ürünü Flyp henüz otomatik kapatmıyor. Bu bağlantı kurulana kadar Flyp’te “Mark as sold &amp; Delist → Sold on Other” kullan.</div><button class="btn alt" onclick="navigate('rec')">Kasa ve fişleri aç →</button></section>
+<section id="t-pub" hidden><div class="pagehead"><div><h1>Yayın sırası</h1><p>Yeni eklenen ürünleri onayla veya günlere yay.</p></div></div><div class="panel"><div class="toolbar"><button class="chip" onclick="document.querySelectorAll('.pq').forEach(c=>c.checked=true)">Taslakları seç</button><button class="btn" onclick="pubSet('now')">Şimdi yayınla</button></div><details><summary>Günlük yayın planla</summary><div class="toolbar"><label>Günde <input id="pubPer" type="number" value="1" min="1" style="width:70px"></label><label>Başlangıç <input id="pubStart" type="date"></label><button class="btn alt" onclick="pubSet('daily')">Planla</button></div></details><div class="inv" id="pubList"></div></div></section>
+<section id="t-off" hidden><div class="pagehead"><div><h1>Teklifler</h1><p>Müşterilerin ürün ve paket fiyat teklifleri.</p></div></div><div class="panel"><p class="small" style="margin-bottom:15px">Kabul ettiğinde ödeme bağlantısı oluşturulur. Müşteriye göndermeden önce e-posta taslağını kontrol et.</p><div id="offList" class="inv"></div></div></section>
+<section id="t-rec" hidden><div class="pagehead"><div><h1>Kasa ve fişler</h1><p>Barkod okut, satışı işle ve fiş yazdır.</p></div></div><div class="panel formbody"><label for="recScan">Ürün barkodu / SKU · Enter ile ekle</label><input id="recScan" placeholder="HC-V-DR-0001"><details><summary>Elle satır ekle</summary><div class="toolbar"><input id="recName" placeholder="Örn. kargo ücreti" aria-label="Fiş satırı açıklaması"><input id="recPrice" type="number" step="0.01" placeholder="$" aria-label="Fiş satırı fiyatı" style="width:100px;flex:0 1 100px"><button class="chip" onclick="recAddManual()">Ekle</button></div></details><div id="recLines" class="inv" style="margin:15px 0"></div><div class="two"><div><label for="recMethod">Ödeme</label><select id="recMethod"><option value="Cash">Nakit</option><option value="Card (POS)">Kart / POS</option><option value="Other">Diğer</option></select></div><div><label for="recNote">Not</label><input id="recNote" placeholder="İsteğe bağlı"></div></div><div class="toolbar" style="margin-top:20px"><button class="btn" onclick="recSave(true)">Satıldı işaretle ve fiş yazdır</button><button class="btn alt" onclick="recSave(false)">Yalnızca fiş yazdır</button></div><p class="small">Square’da işlenen bir satışı tekrar düşürme; yalnızca fiş yazdır seçeneğini kullan.</p></div><div class="panel"><h2>Son Square ödemeleri</h2><div id="recSq" class="inv" style="margin-top:12px"></div></div><div class="panel"><div class="panelhead"><h2>Basılmış fişler</h2><button class="chip" onclick="recCsv()">CSV indir</button></div><div id="recCash" class="inv"></div></div></section>
+<section id="t-settings" hidden><div class="pagehead"><div><h1>Ayarlar</h1><p>Mağaza araçları ve yedekleme.</p></div></div><div class="panel formbody"><h2>Mağazaya özel barkod kataloğu</h2><p class="small" style="margin:10px 0 16px">Takı, havlu ve küçük aksesuarlar için ortak barkodlar. Siteye çıkmaz; adet takibi yapılmaz.</p><button class="btn alt" onclick="navigate('cat')">Barkod kataloğunu düzenle →</button></div><div class="panel formbody"><h2>Fotoğraf yedeği</h2><p class="small" style="margin:10px 0 16px">Fotoğrafları JSON olarak indir. Geri yükleme, bu tarayıcıdaki yedeği kullanır.</p><div class="toolbar"><button class="btn alt" onclick="savePhotos()">Yedeği indir</button><button class="btn alt" onclick="restorePhotos()">Eksik fotoğrafları geri yükle</button></div><div id="bkInfo" class="small" role="status"></div></div></section>
+<section id="t-cat" hidden><div class="pagehead"><div><h1>Barkod kataloğu</h1><p>Her satır: Ürün adı | Fiyat | KOD. Fiyat boşsa kasada girilir.</p></div><button class="btn alt" onclick="navigate('settings')">Geri</button></div><div class="panel formbody"><textarea id="gen" style="min-height:350px;font-family:monospace;font-size:13px">2 Rings | 5 | RING2
 Earrings | 5 | EAR
 Necklace | 5 | NECK
 5 Bracelets | 5 | BRAC5
@@ -81,48 +50,68 @@ Figurine |  | FIG
 Turkish Towel, Large | 25 | TWL-L
 Turkish Towel, Small | 15 | TWL-S
 Oya Headscarf | 40 | OYA
-$15 Rack Item | 15 | RACK15</textarea>
-  <div style="display:grid;gap:8px;margin-top:10px"><button class="btn" onclick="genCreate()">1. Create in Square</button><button class="btn alt" onclick="genPrint()">2. Print A4 barcode sheet</button><div id="genInfo" class="small"></div></div>
-</section>
-<section id="t-imp" hidden>
-  <div class="note small"><b>Aerial video</b> (one time): asks Google to make the flyover video of the shop. It can take a few hours; the site shows it by itself when ready.</div>
-  <button class="btn alt" style="margin-bottom:24px" onclick="aerialRender()">Request aerial video</button>
-  <div class="note small"><b>Moving to real Square</b><br>Step 1, while still in test mode: save the photos. Step 2, after switching to real Square and importing: put them back.</div>
-  <div style="display:grid;gap:8px;margin-bottom:24px"><button class="btn alt" onclick="savePhotos()">1. Save photo backup</button><button class="btn alt" onclick="restorePhotos()">2. Restore photos from backup</button><div id="bkInfo" class="small"></div></div>
-  <div class="note small"><b>Sold somewhere else?</b> Pick a Flyp sales report (xlsx or csv). Every piece in it is marked sold here and disappears from the site. In-store Square sales drop off by themselves.</div>
-  <input id="sales" type="file" accept=".xlsx,.csv"><div id="salesInfo" class="small" style="margin:10px 0 24px"></div>
-  <div class="note small">Pick a current eBay "Active listings" CSV. Listings are linked by eBay number. Existing Square prices and stock are preserved. A cover photo is required to appear on the site. Failed listings can be retried without recreating them.</div>
-  <div id="ebayStatus" class="note small" role="status">Checking eBay connection when this tab opens…</div>
-  <input id="csv" type="file" accept=".csv"><div id="impInfo" class="small" style="margin:10px 0"></div>
-  <details style="margin:12px 0"><summary>Or paste CSV text</summary>
-    <label for="csvText">Paste the complete CSV, including its column header</label>
-    <textarea id="csvText" spellcheck="false" placeholder="Item number,Title,Available quantity,Currency,Current price…"></textarea>
-    <button class="btn alt" id="csvRead" type="button" onclick="loadImportCSV($('#csvText').value)">Review pasted CSV</button>
-  </details>
-  <div id="conAsk" hidden class="note small"><b>Any consignment pieces in this file?</b> Tick them; they get HC-K SKUs (50% to the owner).<div id="conList" style="max-height:260px;overflow:auto;margin-top:8px"></div></div>
-  <button class="btn" id="impGo" disabled onclick="runImport()">Import / retry unfinished</button>
-  <button class="btn alt" id="impStop" hidden onclick="IMPORT_STOP = true; this.disabled = true;">Stop after this listing</button>
-  <button class="btn alt" id="picGo" disabled style="margin-top:10px" onclick="runPhotos()">Retry missing cover photos</button>
-  <div class="small" style="margin-top:6px">Processes one listing at a time. Keep this page open. eBay may block website photo access until the official seller API is connected. A failure appears below; it is never counted as success.</div>
-<button class="btn alt" id="impDownload" hidden style="margin-top:10px" onclick="downloadImportResults()">Download import results</button>
-  <div id="impResults" class="small" aria-live="polite" style="margin-top:12px;max-height:420px;overflow:auto"></div>
-</section>
-</div>
-<div class="toast" id="toast"></div>
-</main>
+$15 Rack Item | 15 | RACK15</textarea><div class="toolbar" style="margin-top:16px"><button class="btn" onclick="genCreate()">Square’da oluştur</button><button class="btn alt" onclick="genPrint()">A4 barkod sayfası yazdır</button></div><div id="genInfo" class="small"></div></div></section>
+</main></div><div class="toast" id="toast" role="status"></div>
 <script src="/assets/heron.js?v=13"></script>
 <script>
 let PW = sessionStorage.getItem("heron-pw") || "", PHOTOS = [], INV = [], ROWS = [];
 const A = (action, data) => api(action, data, { "x-admin-password": PW });
 $("#category").innerHTML = HERON.categories.map((c) => `<option>${c}</option>`).join("");
-document.querySelectorAll(".tabs .chip").forEach((b) => b.onclick = () => {
-  document.querySelectorAll(".tabs .chip").forEach((x) => x.classList.toggle("on", x === b));
-  ["add", "inv", "imp", "cat", "pub", "off", "rec"].forEach((t) => $("#t-" + t).hidden = t !== b.dataset.t);
-  if (b.dataset.t === "rec") loadRec(); if (b.dataset.t === "pub") loadPub(); if (b.dataset.t === "off") loadOff();
-  if (b.dataset.t === "inv") loadInv(); if (b.dataset.t === "imp") loadEbayStatus();
-});
-async function login() { PW = $("#pw").value || PW; try { await A("admin_list"); sessionStorage.setItem("heron-pw", PW); $("#login").hidden = true; $("#app").hidden = false; } catch (e) { toast(e.message); } }
-if (PW) login();
+const VIEWS = ["home","add","inv","imp","sales","cat","pub","off","rec","settings"];
+let PUBLIC_IDS = null, QUEUE = [], QUEUE_KNOWN = false, REFRESHING = null;
+function navigate(view) {
+  if (!VIEWS.includes(view)) view = "home";
+  VIEWS.forEach(t => $("#t-"+t).hidden = t !== view);
+  document.querySelectorAll(".tabs [data-t]").forEach(b => { b.classList.toggle("on", b.dataset.t===view || (view==="cat" && b.dataset.t==="settings")); b.setAttribute("aria-current",b.classList.contains("on")?"page":"false"); });
+  if (view==="home") loadHome(); if (view==="inv") loadInv(); if (view==="imp") loadEbayStatus();
+  if (view==="pub") loadPub(); if (view==="off") loadOff(); if (view==="rec") loadRec();
+}
+document.querySelectorAll(".tabs [data-t]").forEach(b => b.onclick=()=>navigate(b.dataset.t));
+async function login() {
+  PW = $("#pw").value || PW; $("#loginBtn").disabled=true; $("#loginError").textContent="";
+  try { const r=await A("admin_list"); INV=r.items; sessionStorage.setItem("heron-pw",PW); $("#login").hidden=true; $("#app").hidden=false; await loadHome(r.items); }
+  catch(e){ $("#loginError").textContent=e.message; }
+  finally { $("#loginBtn").disabled=false; }
+}
+async function refreshInventory(items) {
+  if(REFRESHING)return REFRESHING;
+  REFRESHING=(async()=>{
+    const [inventory,visible,queue]=await Promise.allSettled([items?Promise.resolve({items}):A("admin_list"),api("list"),A("admin_queue")]);
+    if(inventory.status!=="fulfilled")throw inventory.reason;
+    INV=inventory.value.items;
+    PUBLIC_IDS=visible.status==="fulfilled"?new Set(visible.value.items.filter(x=>!x.sold).map(x=>x.id)):null;
+    QUEUE_KNOWN=queue.status==="fulfilled"; QUEUE=QUEUE_KNOWN?queue.value.rows:[];
+    $("#squareBadge").textContent="Bağlı";$("#squareBadge").className="badge";
+    return {partial:visible.status!=="fulfilled"||!QUEUE_KNOWN};
+  })();
+  try{return await REFRESHING;}finally{REFRESHING=null;}
+}
+function itemState(x) {
+  if(x.sku.startsWith("HC-G-"))return {key:"store",label:"Mağazaya özel",tone:"muted"};
+  if(x.qty<=0)return {key:"sold",label:"Stok yok",tone:"muted"};
+  if(!x.images.length)return {key:"noPhoto",label:"Fotoğraf eksik",tone:"warn"};
+  const q=QUEUE.find(r=>r.item_id===x.id);
+  if(q && !(q.status==="approved" && q.publish_at && Date.parse(q.publish_at)<=Date.now()))return {key:"draft",label:q.status==="draft"?"Yayın onayı bekliyor":"Yayın tarihi bekleniyor",tone:"warn"};
+  if(PUBLIC_IDS===null)return {key:"unknown",label:"Görünürlük doğrulanamadı",tone:"muted"};
+  return PUBLIC_IDS.has(x.id)?{key:"live",label:"Sitede satışta",tone:""}:{key:"hidden",label:"Görünmüyor · kontrol et",tone:"warn"};
+}
+function hiddenActive(x){return x.qty>0&&!x.sku.startsWith("HC-G-")&&["noPhoto","draft","hidden"].includes(itemState(x).key);}
+function badge(x){const s=itemState(x);return `<span class="badge ${s.tone}">${s.label}</span>`;}
+function openInventory(filter="all",search=""){$("#invStatus").value=filter;$("#filter").value=search;navigate("inv");}
+async function loadHome(items) {
+  $("#homeError").innerHTML="";
+  try {
+    const r=await refreshInventory(items),stock=INV.filter(x=>x.qty>0&&!x.sku.startsWith("HC-G-")),hidden=INV.filter(hiddenActive),sold=INV.filter(x=>x.qty<=0&&!x.sku.startsWith("HC-G-"));
+    const metrics=[{label:"Stokta ürün",n:stock.length,note:"Square envanteri",filter:"all"},{label:"Sitede satışta",n:PUBLIC_IDS===null?"—":PUBLIC_IDS.size,note:"Müşterinin görebildiği",filter:"live"},{label:"Sitede görünmeyen",n:PUBLIC_IDS===null?"—":hidden.length,note:"Fotoğraf veya yayın eksik",filter:"hidden",warn:true},{label:"Stokta olmayan",n:sold.length,note:"Satılmış / stok sıfır",filter:"sold"}];
+    $("#metrics").innerHTML=metrics.map(m=>`<button class="metric ${m.warn?"warn":""}" onclick="openInventory('${m.filter}')"><span>${m.label}</span><strong>${m.n}</strong><small>${m.note}</small></button>`).join("");
+    $("#missingN").textContent=PUBLIC_IDS===null?"?":hidden.length;
+    $("#attentionList").innerHTML=hidden.length?hidden.slice(0,6).map(x=>`<div class="attentionrow"><div class="placeholder" aria-hidden="true">▧</div><div><button class="quiet" style="text-align:left;color:var(--ink);font-weight:550;font-size:12px" onclick="openInventory('hidden','${esc(x.sku)}')">${esc(x.title)}</button><br><small>${esc(x.sku)} · ${money(x.price)}</small></div>${badge(x)}</div>`).join("")+(hidden.length>6?`<button class="quiet" style="margin-top:16px" onclick="openInventory('hidden')">${hidden.length-6} ürün daha →</button>`:""):`<div class="empty">${PUBLIC_IDS===null?"Görünürlük bilgisi alınamadı. Yeniden dene.":"Stoktaki ürünlerde eksik görünürlük yok."}</div>`;
+    $("#lastRefresh").innerHTML=`Son kontrol: ${new Date().toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"})} · <button class="quiet" onclick="loadHome()">Yenile</button>`;
+    if(r.partial)$("#homeError").innerHTML='<div class="note warning small">Bazı görünürlük bilgileri alınamadı. Yenileyerek tekrar kontrol et.</div>';
+    loadEbayStatus();
+  }catch(e){$("#homeError").innerHTML=`<div class="note warning">Ürünler alınamadı: ${esc(e.message)} <button class="quiet" onclick="loadHome()">Yeniden dene</button></div>`;$("#squareBadge").textContent="Erişilemiyor";}
+}
+if(PW)login();
 
 // photos: crop to 4:5, max 1600px wide, jpeg
 function prep(file) { return new Promise((ok, no) => { const img = new Image(); img.onload = () => {
@@ -133,28 +122,56 @@ function prep(file) { return new Promise((ok, no) => { const img = new Image(); 
 }; img.onerror = no; img.src = URL.createObjectURL(file); }); }
 $("#photos").onchange = async (e) => { PHOTOS = await Promise.all([...e.target.files].map(prep)); $("#thumbs").innerHTML = PHOTOS.map((p) => `<img src="${p}">`).join(""); };
 const MARKUP = 30; // other marketplaces = store price + 30% (use 25 to 35)
-$("#price").oninput = () => { const p = +$("#price").value; $("#siteprice").innerHTML = p ? `Store and site: <b>$${p}</b> (site shows <s>$${Math.ceil(p * 1.1)}</s>, 10% off) · List on eBay, Poshmark, Depop…: <b>$${Math.round(p * (1 + MARKUP / 100))}</b>` : ""; };
+$("#price").oninput = () => { const p = +$("#price").value; $("#siteprice").innerHTML = p ? `Mağaza ve site: <b>$${p}</b> · Diğer kanallarda önerilen fiyat (+%${MARKUP}): <b>$${Math.round(p * (1 + MARKUP / 100))}</b>` : ""; };
 
 async function save() {
   const item = { title: $("#title").value.trim(), category: $("#category").value, size: $("#size").value.trim(), price: +$("#price").value,
     description: [`Condition: ${$("#cond").value}`, $("#desc").value.trim()].filter(Boolean).join("\n\n"), sku: $("#sku").value.trim() || undefined, consign: $("#consign").checked, images: PHOTOS };
-  if (!item.title || !item.price) return toast("Title and price are required");
-  if (!PHOTOS.length && !confirm("No photos. It will be saved but hidden on the site. Continue?")) return;
-  $("#save").disabled = true; $("#save").textContent = "Saving…";
-  try { const r = await A("admin_create", { item }); toast(`Saved ${r.skus[0] || ""}`);
+  if (!item.title || !Number.isFinite(item.price) || item.price <= 0) return toast("Ürün adı ve pozitif fiyat gerekli");
+  if (!PHOTOS.length && !confirm("Fotoğraf yok. Ürün kaydedilir ama sitede görünmez. Devam edilsin mi?")) return;
+  $("#save").disabled = true; $("#save").textContent = "Kaydediliyor…";
+  try { const r = await A("admin_create", { item }); toast(`Kaydedildi ${r.skus[0] || ""} · Yayın sırasından onayla`);
     ["title", "size", "price", "desc", "sku", "photos"].forEach((i) => $("#" + i).value = ""); $("#consign").checked = false; PHOTOS = []; $("#thumbs").innerHTML = ""; $("#siteprice").textContent = "";
   } catch (e) { toast(e.message); }
-  $("#save").disabled = false; $("#save").textContent = "Save to Square and the site";
+  $("#save").disabled = false; $("#save").textContent = "Ürünü kaydet";
 }
 
-async function loadInv() { $("#inv").innerHTML = "<p class='small'>Loading…</p>"; INV = (await A("admin_list")).items; drawInv(); }
+async function loadInv() {
+  $("#inv").innerHTML="<p class='empty'>Ürünler yükleniyor…</p>";
+  try{await refreshInventory();drawInv();}catch(e){$("#inv").innerHTML=`<p class="error">${esc(e.message)} <button class="quiet" onclick="loadInv()">Yeniden dene</button></p>`;}
+}
 function drawInv() {
-  const f = $("#filter").value.toLowerCase();
-  $("#inv").innerHTML = INV.filter((x) => !f || (x.title + x.sku).toLowerCase().includes(f)).map((x) => `<div class="row">
-    <label style="margin:0;display:flex;gap:8px;align-items:center"><input type="checkbox" style="width:auto" ${SEL.has(x.id) ? "checked" : ""} onchange="this.checked ? SEL.add('${x.id}') : SEL.delete('${x.id}'); $('#selN').textContent = SEL.size">${x.images[0] ? `<img src="${x.images[0]}">` : `<div class="noimg"></div>`}</label>
-    <div>${esc(x.title)}<div class="small">${esc(x.sku)} · ${money(x.price)} · ${x.qty > 0 ? "in stock" : "sold"} · ${x.images.length} photos${/^HC-K-/.test(x.sku) ? " · <b>consignment</b>" : ""}${PRINTED().has(x.id) ? " · label printed" : ""}</div></div>
-    <div style="display:grid;gap:6px">${x.qty > 0 ? `<button class="chip" onclick="markSold(['${x.id}'])">Sold</button><button class="chip" onclick="forFlyp('${x.id}')">Flyp</button>` : ""}<label class="chip" style="margin:0">+ Photos<input type="file" accept="image/*" multiple hidden onchange="addPhotos('${x.item_id}','${esc(x.sku)}',this)"></label></div></div>`).join("");
-  $("#selN").textContent = SEL.size;
+  const f=$("#filter").value.trim().toLocaleLowerCase(),status=$("#invStatus").value;
+  const rows=INV.filter(x=>{
+    if(f && !(x.title+" "+x.sku).toLocaleLowerCase().includes(f))return false;
+    if(status==="all")return true;if(status==="hidden")return hiddenActive(x);
+    if(status==="consign")return /^HC-K-/.test(x.sku);
+    return itemState(x).key===status;
+  });
+  $("#invCount").textContent=`${rows.length} / ${INV.length} ürün`;
+  $("#inv").innerHTML=rows.map(x=>`<div class="row"><label class="rowcheck"><input aria-label="${esc(x.title)} seç" type="checkbox" ${SEL.has(x.id)?"checked":""} onchange="this.checked?SEL.add('${x.id}'):SEL.delete('${x.id}');$('#selN').textContent=SEL.size">${x.images[0]?`<img src="${esc(x.images[0])}" alt="" loading="lazy">`:'<div class="noimg" aria-hidden="true">▧</div>'}</label><div><div class="producttitle">${esc(x.title)}</div><div class="small">${esc(x.sku)}${x.size?" · "+esc(x.size):""} · ${x.images.length} fotoğraf${/^HC-K-/.test(x.sku)?" · Konsinye":""}${PRINTED().has(x.id)?" · Barkod basıldı":""}</div><div class="productmeta"><span class="productprice">${money(x.price)}</span>${badge(x)}</div></div><div class="actions">${x.qty>0?`<button class="chip" onclick="markSold(['${x.id}'])">Satıldı</button><button class="chip" onclick="forFlyp('${x.id}')">Flyp’e kopyala</button>`:""}<label class="chip">＋ Fotoğraf<input aria-label="${esc(x.title)} fotoğraf ekle" type="file" accept="image/*" multiple hidden onchange="addPhotos('${x.item_id}','${esc(x.sku)}',this)"></label></div></div>`).join("")||'<div class="empty">Bu filtreye uygun ürün bulunamadı.</div>';
+  $("#selN").textContent=SEL.size;
+}
+async function repairPhotos() {
+  let rows;try{rows=JSON.parse($("#photoPackage").value);if(!Array.isArray(rows)||!rows.length||rows.length>50)throw Error("1–50 ürünlük bir JSON listesi kullan.");}catch(e){$("#photoRepairInfo").textContent=e.message;return;}
+  $("#photoRepair").disabled=true;const results=[];
+  try {
+    const inv=(await A("admin_list")).items;
+    for(const row of rows){
+      $("#photoRepairInfo").textContent=`${results.length+1} / ${rows.length} · ${row.title||row.sku}`;
+      try{
+        const matches=inv.filter(x=>x.sku===row.sku&&x.title.trim()===String(row.title).trim());
+        if(matches.length!==1)throw Error("SKU ve ürün adı benzersiz eşleşmedi.");
+        const x=matches[0];if(x.images.length){results.push(`${x.sku}: Fotoğrafı var, atlandı.`);continue;}
+        if(!Array.isArray(row.images)||!row.images.length)throw Error("Fotoğraf adresi eksik.");
+        const images=row.images.slice(0,1);
+        if(!images.every(u=>{try{const a=new URL(u);return a.protocol==="https:"&&["d23aajz77qcbzl.cloudfront.net","i.ebayimg.com"].includes(a.hostname);}catch{return false;}}))throw Error("Doğrulanmış Flyp veya eBay fotoğraf bağlantısı kullan.");
+        await A("admin_add_photos",{item_id:x.item_id,sku:x.sku,images});
+        results.push(`${x.sku}: Kapak fotoğrafı eklendi.`);
+      }catch(e){results.push(`${row.sku||"Ürün"}: HATA · ${e.message}`);}
+    }
+    $("#photoRepairInfo").textContent=results.join("\n");$("#photoRepairInfo").style.whiteSpace="pre-line";await loadInv();
+  }catch(e){$("#photoRepairInfo").textContent=e.message;}finally{$("#photoRepair").disabled=false;}
 }
 const SEL = new Set();
 const PRINTED = () => { try { return new Set(JSON.parse(localStorage.getItem("heron-printed") || "[]")); } catch { return new Set(); } };
@@ -180,14 +197,14 @@ function facts(x) {
 }
 function saveNotes() { const n = TAGNOTE(); document.querySelectorAll("#tagEdit input[data-id]").forEach((i) => (n[i.dataset.id] = i.value.trim())); try { localStorage.setItem("heron-tagnote", JSON.stringify(n)); } catch {} }
 async function printLabels(ready = false) {
-  const items = INV.filter((x) => SEL.has(x.id)); if (!items.length) return toast("Select pieces first");
+  const items = INV.filter((x) => SEL.has(x.id)); if (!items.length) return toast("Önce ürün seç");
   const rows0 = Number($("#labelRows").value), notes = TAGNOTE();
   const withPhoto = $("#labelPhoto").checked; try { localStorage.setItem("heron-label-photo", withPhoto ? "1" : ""); } catch {}
   if ((rows0 <= 5 || withPhoto) && !ready) {
     const ph = TAGPHOTO();
     $("#tagEdit").innerHTML = `<div class="small" style="margin-bottom:6px">${withPhoto ? "<b>Photo:</b> tap the photo to print on each label (the brand tag or the full piece). " : ""}${rows0 <= 5 ? "<b>Info line:</b> filled from the description when possible. Short is best: country, fabric, model." : ""}</div>` +
       items.map((x) => `<div style="margin:8px 0;padding-bottom:8px;border-bottom:1px solid #eee"><div class="small">${esc(x.title)}</div>
-      ${withPhoto ? `<div style="display:flex;gap:4px;overflow-x:auto;margin:4px 0">${x.images.slice(0, 10).map((u, i) => `<img src="${u}" onclick="pickPhoto('${x.id}',${i},this)" style="width:48px;height:48px;object-fit:cover;border-radius:4px;cursor:pointer;outline:${(ph[x.id] ?? 0) === i ? "3px solid #000" : "none"}">`).join("") || `<span class="small">No photos</span>`}</div>` : ""}
+      ${withPhoto ? `<div style="display:flex;gap:4px;overflow-x:auto;margin:4px 0">${x.images.slice(0, 10).map((u, i) => `<img src="${u}" onclick="pickPhoto('${x.id}',${i},this)" style="width:48px;height:48px;object-fit:cover;border-radius:4px;cursor:pointer;outline:${(ph[x.id] ?? 0) === i ? "3px solid #000" : "none"}">`).join("") || `<span class="small">Fotoğraf yok</span>`}</div>` : ""}
       ${rows0 <= 5 ? `<input data-id="${x.id}" maxlength="90" value="${esc(notes[x.id] ?? facts(x))}" placeholder="Made in Italy · 100% wool · Model 2019">` : ""}</div>`).join("") +
       `<div style="display:flex;gap:6px;margin-top:8px"><button class="chip on" onclick="saveNotes();printLabels(true)">Print</button><button class="chip" onclick="$('#tagEdit').hidden=true">Cancel</button></div>`;
     $("#tagEdit").hidden = false; return;
@@ -293,7 +310,7 @@ function importBusy(busy) {
   $("#conList").querySelectorAll("input").forEach((x) => x.disabled = busy);
 }
 function drawImportResults() {
-  $("#impResults").innerHTML = IMPORT_RESULTS.map((r) => `<div style="padding:8px 0;border-bottom:1px solid #ddd"><b>${esc(r.title)}</b> · ${esc(r.ebay)}<br>${r.status === "failed" ? `<span style="color:#9b2226">${esc(r.error)}</span>` : `${r.status === "created" ? "Created" : "Already linked"} · cover photo available`}</div>`).join("");
+  $("#impResults").innerHTML = IMPORT_RESULTS.map((r) => `<div class="importresult"><b>${esc(r.title)}</b> · ${esc(r.ebay)}<br>${r.status === "failed" ? `<span style="color:#9b2226">${esc(r.error)}</span>` : `${r.status === "created" ? "Oluşturuldu" : "Mevcut ürün eşleşti"} · kapak fotoğrafı hazır`}</div>`).join("");
   $("#impDownload").hidden = !IMPORT_RESULTS.length;
 }
 function loadImportCSV(text) {
@@ -304,7 +321,7 @@ function loadImportCSV(text) {
     ROWS = parsed.rows; IMPORT_RESULTS = parsed.issues;
     $("#conList").innerHTML = ROWS.map((r, i) => `<label style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" style="width:auto" onchange="ROWS[${i}].consign = this.checked">${esc(r.title)} <span class="small">· ${esc(r.start.slice(0, 9))}</span></label>`).join("");
     $("#conAsk").hidden = !ROWS.length;
-    $("#impInfo").textContent = `${ROWS.length} listings ready; ${parsed.issues.length} need review. Prices include the existing ${MARKUP}% marketplace markup conversion.`;
+    $("#impInfo").textContent = `${ROWS.length} ilan hazır · ${parsed.issues.length} satır kontrol gerektiriyor. Yeni ürün fiyatı: eBay fiyatı ÷ 1,30. Mevcut fiyatlar korunur.`;
   } catch (err) { $("#impInfo").textContent = err.message; }
   drawImportResults(); importBusy(false);
 }
@@ -313,11 +330,8 @@ $("#csv").onchange = async (e) => {
   try { loadImportCSV(await e.target.files[0].text()); }
   catch (err) { $("#impInfo").textContent = err.message; }
 };
-async function loadEbayStatus() {
-  try { const s = await A("admin_ebay_status"); $("#ebayStatus").textContent = s.connected
-    ? "eBay seller API configured. Test an import to verify access. Automatic sync is not enabled."
-    : "eBay seller API is not connected. Website photo access may fail; add a cover from Inventory or connect the seller API. Automatic sync is not enabled.";
-  } catch (e) { $("#ebayStatus").textContent = "Connection status unavailable: " + e.message; }
+async function loadEbayStatus(){
+  try{const r=await A("admin_ebay_status");$("#ebayStatus").textContent=r.connected?"eBay API bilgileri kayıtlı. Erişimi aktarım ile doğrula. Otomatik eşitleme henüz açık değil.":"eBay API bağlı değil. Developer hesabı onaylandığında bağlayacağız. Şimdilik CSV ile aktarım yapılabilir; eBay fotoğraf erişimini engelleyebilir.";$("#ebayBadge").textContent=r.connected?"Yapılandırıldı":"Bağlı değil";$("#ebayBadge").className=r.connected?"badge":"badge warn";}catch(e){$("#ebayStatus").textContent="Bağlantı durumu alınamadı: "+e.message;$("#ebayBadge").textContent="Bilinmiyor";}
 }
 async function runPhotos() { return runImport(true); }
 async function runImport(photosOnly = false) {
@@ -348,7 +362,7 @@ async function runImport(photosOnly = false) {
     }
     const failed = IMPORT_RESULTS.filter((r) => r.status === "failed").length;
     const ok = IMPORT_RESULTS.length - failed;
-    $("#impInfo").textContent = `${IMPORT_STOP ? "Stopped after the current listing." : "Finished."} ${ok} ready; ${failed} need attention. Import again to retry. After closing this page, select the same CSV to resume safely. Existing stock and prices are preserved.`;
+    $("#impInfo").textContent = `${IMPORT_STOP?"Durduruldu.":"Tamamlandı."} ${ok} hazır · ${failed} hata. Başarısızları yeniden deneyebilirsin. Sayfayı kapattıysan aynı CSV’yi tekrar seç. Mevcut stok ve fiyatlar korunur.`;
   } finally { importBusy(false); }
 }
 function downloadImportResults() {
@@ -356,28 +370,33 @@ function downloadImportResults() {
   a.href = url; a.download = `heron-import-${new Date().toISOString().slice(0, 10)}.json`; a.click(); URL.revokeObjectURL(url);
 }
 
-async function markSold(ids) {
-  if (!confirm(`Mark ${ids.length} piece(s) as sold? They will disappear from the site.`)) return;
-  try { await A("admin_mark_sold", { ids }); toast("Marked sold"); if (!$("#t-inv").hidden) loadInv(); } catch (e) { toast(e.message); }
+async function markSold(ids){
+  if(!confirm(`${ids.length} ürün satıldı işaretlensin mi? Site ve Square stoğu sıfırlanır.`))return false;
+  try{await A("admin_mark_sold",{ids});toast("Satıldı işaretlendi");if(!$("#t-inv").hidden)await loadInv();return true;}catch(e){toast(e.message);return false;}
 }
-$("#sales").onchange = async (e) => {
-  const f = e.target.files[0]; if (!f) return; $("#salesInfo").textContent = "Reading…";
-  try {
-    if (!window.XLSX) await new Promise((ok, no) => { const sc = document.createElement("script"); sc.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); });
-    const wb = XLSX.read(await f.arrayBuffer()); const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
-    const cols = Object.keys(rows[0] || {}); const key = cols.find((k) => /title/i.test(k)) || cols.find((k) => /product name|item name|^name$/i.test(k));
-    if (cols.includes("Item number") && cols.includes("Available quantity")) throw new Error("This is the eBay active listings file. Pick it in the box at the bottom instead.");
-    if (!key) throw new Error("Could not find a title column in this file");
-    const norm = (t) => String(t).trim().toLowerCase().replace(/\s+/g, " ");
-    const titles = new Set(rows.map((r) => norm(r[key])).filter(Boolean));
-    const inv = (await A("admin_list")).items;
-    const hit = inv.filter((x) => x.qty > 0 && titles.has(norm(x.title)));
-    if (!hit.length) { $("#salesInfo").textContent = `${titles.size} sales in the file, none of them are still for sale here.`; return; }
-    $("#salesInfo").textContent = `${titles.size} sales in the file. Found ${hit.length} still for sale here: ${hit.map((x) => x.title).join(" · ")}`;
-    await markSold(hit.map((x) => x.id));
-    $("#salesInfo").textContent += " · Done.";
-  } catch (err) { $("#salesInfo").textContent = "Stopped: " + err.message; }
+let SALES_MATCHES=[];
+function matchSales(rows,inv){
+  const cols=Object.keys(rows[0]||{}),titleKey=cols.find(k=>/title/i.test(k))||cols.find(k=>/product name|item name|^name$/i.test(k)),skuKey=cols.find(k=>/^(?:custom label \(sku\)|sku|custom sku)$/i.test(k));
+  if(cols.includes("Item number")&&cols.includes("Available quantity"))throw Error("Bu aktif ilan dosyası. eBay aktarımı bölümünü kullan.");
+  if(!titleKey&&!skuKey)throw Error("Ürün adı veya SKU sütunu bulunamadı.");
+  const norm=t=>String(t??"").trim().toLowerCase().replace(/\s+/g," ");const matched=new Map(),issues=[];
+  for(const row of rows){const sku=String(row[skuKey]||"").trim(),title=norm(row[titleKey]);if(!sku&&!title)continue;
+    const candidates=inv.filter(x=>sku?x.sku===sku:norm(x.title)===title);
+    if(candidates.length!==1){issues.push({title:String(row[titleKey]||sku),reason:candidates.length?"Birden fazla ürün eşleşti; SKU gerekli.":"Eşleşen ürün yok."});continue;}
+    const x=candidates[0];if(x.qty<=0)continue;if(x.sku.startsWith("HC-G-")){issues.push({title:x.title,reason:"Mağazaya özel ortak barkod; adet takibi yok."});continue;}matched.set(x.id,x);
+  }
+  return {matches:[...matched.values()],issues};
+}
+$("#sales").onchange=async e=>{
+  const file=e.target.files[0];if(!file)return;SALES_MATCHES=[];$("#salesApply").hidden=true;$("#salesReview").innerHTML="";$("#salesInfo").textContent="Rapor okunuyor…";
+  try{
+    if(!window.XLSX)await new Promise((ok,no)=>{const sc=document.createElement("script");sc.src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";sc.onload=ok;sc.onerror=no;document.head.appendChild(sc);});
+    const wb=XLSX.read(await file.arrayBuffer()),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""});const result=matchSales(rows,(await A("admin_list")).items);SALES_MATCHES=result.matches;
+    $("#salesInfo").textContent=`${rows.length} rapor satırı · ${result.matches.length} stoktaki ürün eşleşti · ${result.issues.length} satır kontrol gerektiriyor. Henüz stok değişmedi.`;
+    $("#salesReview").innerHTML=result.matches.map(x=>`<div class="statusline"><div>${esc(x.title)}<div class="small">${esc(x.sku)}</div></div><span class="badge">Eşleşti</span></div>`).join("")+result.issues.map(x=>`<div class="statusline"><div>${esc(x.title)}<div class="small error">${esc(x.reason)}</div></div></div>`).join("");$("#salesApply").hidden=!SALES_MATCHES.length;
+  }catch(e){$("#salesInfo").textContent="İşlem durdu: "+e.message;}
 };
+async function applySales(){const b=$("#salesApply");b.disabled=true;try{if(await markSold(SALES_MATCHES.map(x=>x.id))){$("#salesInfo").textContent=`${SALES_MATCHES.length} ürün satıldı işaretlendi. Site ve Square stoğu güncellendi.`;SALES_MATCHES=[];b.hidden=true;}}finally{b.disabled=false;}}
 async function savePhotos() {
   try { const items = (await api("list")).items; const map = {};
     for (const x of items) if (x.images.length) map[x.title.trim().toLowerCase()] = x.images;
@@ -401,35 +420,35 @@ async function aerialRender() {
   const j = await r.json(); toast(j.state ? `Google says: ${j.state}` : (j.error?.message || "Request failed"));
 }
 let PUB = [];
-async function loadPub() { $("#pubStart").value ||= new Date(Date.now() + 864e5).toISOString().slice(0, 10); $("#pubList").innerHTML = "<p class='small'>Loading…</p>";
+async function loadPub() { $("#pubStart").value ||= new Date(Date.now() + 864e5).toISOString().slice(0, 10); $("#pubList").innerHTML = "<p class='small'>Yükleniyor…</p>";
   try { PUB = (await A("admin_queue")).rows; } catch (e) { $("#pubList").innerHTML = `<p class="small">${esc(e.message)}</p>`; return; }
   $("#pubList").innerHTML = PUB.length ? PUB.map((r) => { const x = r.item, live = r.status === "approved" && Date.parse(r.publish_at) <= Date.now();
-    return `<div class="row">${r.status === "draft" ? `<input type="checkbox" class="pq" value="${r.item_id}" style="width:auto">` : "<span></span>"}<div>${esc(x.title)}<div class="small">${money(x.price)} · ${r.status === "draft" ? "<b>waiting for approval</b>" : live ? "live" : "goes live " + new Date(r.publish_at).toLocaleDateString()}</div></div><span></span></div>`; }).join("") : "<p class='small'>Nothing waiting.</p>"; }
-async function pubSet(mode) { const ids = [...document.querySelectorAll(".pq:checked")].map((c) => c.value); if (!ids.length) return toast("Select pieces first");
+    return `<div class="row">${r.status === "draft" ? `<input type="checkbox" class="pq" value="${r.item_id}" style="width:auto">` : "<span></span>"}<div>${esc(x.title)}<div class="small">${money(x.price)} · ${r.status === "draft" ? "<b>yayın onayı bekliyor</b>" : live ? "live" : "yayına çıkış " + new Date(r.publish_at).toLocaleDateString()}</div></div><span></span></div>`; }).join("") : "<p class='small'>Yayın bekleyen ürün yok.</p>"; }
+async function pubSet(mode) { const ids = [...document.querySelectorAll(".pq:checked")].map((c) => c.value); if (!ids.length) return toast("Önce ürün seç");
   try { const r = await A("admin_queue_set", { ids, mode, perDay: +$("#pubPer").value, start: $("#pubStart").value }); toast(mode === "now" ? `${r.scheduled} pieces are live` : `Scheduled ${r.scheduled}, last one ${new Date(r.last).toLocaleDateString()}`); loadPub(); } catch (e) { toast(e.message); } }
-async function loadOff() { $("#offList").innerHTML = "<p class='small'>Loading…</p>";
+async function loadOff() { $("#offList").innerHTML = "<p class='small'>Yükleniyor…</p>";
   let rows; try { rows = (await A("admin_offers")).rows; } catch (e) { $("#offList").innerHTML = `<p class="small">${esc(e.message)}</p>`; return; }
   $("#offList").innerHTML = rows.length ? rows.map((o) => { const full = o.items.reduce((t, x) => t + x.price, 0);
     return `<div class="note small" style="margin:0"><b>${esc(o.email)}</b> · ${new Date(o.created_at).toLocaleString()} · <b>${o.status}</b><br>${o.items.map((x) => esc(x.title) + " " + money(x.price)).join("<br>")}<br>Total ${money(full)} · ${o.amount_cents ? "Offer <b>" + money(o.amount_cents) + "</b>" : "<b>Asks for a price</b>"}
-    ${o.status === "new" ? `<div style="display:flex;gap:6px;margin-top:8px"><input id="oa${o.id}" type="number" placeholder="Your price $" value="${o.amount_cents ? o.amount_cents / 100 : ""}" class="chip" style="width:120px"><button class="chip on" onclick="offAns(${o.id},true)">Accept, make link</button><button class="chip" onclick="offAns(${o.id},false)">Decline</button></div>` : o.link ? `<br>Link: <a href="${o.link}" target="_blank">${o.link}</a>` : ""}</div>`; }).join("") : "<p class='small'>No offers yet.</p>"; }
+    ${o.status === "new" ? `<div style="display:flex;gap:6px;margin-top:8px"><input id="oa${o.id}" type="number" placeholder="Your price $" value="${o.amount_cents ? o.amount_cents / 100 : ""}" class="chip" style="width:120px"><button class="chip on" onclick="offAns(${o.id},true)">Kabul et, bağlantı oluştur</button><button class="chip" onclick="offAns(${o.id},false)">Reddet</button></div>` : o.link ? `<br>Link: <a href="${o.link}" target="_blank">${o.link}</a>` : ""}</div>`; }).join("") : "<p class='small'>Henüz teklif yok.</p>"; }
 async function offAns(id, accept) { try { const r = await A("admin_offer_answer", { id, accept, amount: $("#oa" + id)?.value });
   if (accept) { await navigator.clipboard?.writeText(r.link).catch(() => {}); location.href = `mailto:${r.email}?subject=${encodeURIComponent("Your Heron CA bundle")}&body=${encodeURIComponent("Hi! Here is your bundle at the price we agreed. The link is good for one checkout:\n\n" + r.link + "\n\nHeron CA, Venice Beach")}`; }
   loadOff(); } catch (e) { toast(e.message); } }
 function forFlyp(id) {
   const x = INV.find((i) => i.id === id); if (!x) return;
   const txt = `${x.title}\n\nPrice: $${Math.round(x.price / 100 * (1 + MARKUP / 100))}\nSKU: ${x.sku}${x.size ? "\nSize: " + x.size : ""}\n\n${x.description || ""}`;
-  navigator.clipboard.writeText(txt).then(() => toast("Copied for Flyp (price +" + MARKUP + "%)")).catch(() => prompt("Copy this:", txt));
+  navigator.clipboard.writeText(txt).then(() => toast("Flyp için kopyalandı (fiyat +" + MARKUP + "%)")).catch(() => prompt("Copy this:", txt));
 }
 let REC = [];
 const TAX = 9.75; // prices include CA sales tax
 async function loadRec() {
   if (!INV.length) INV = (await A("admin_list")).items;
-  $("#recSq").innerHTML = "<p class='small'>Loading…</p>";
+  $("#recSq").innerHTML = "<p class='small'>Yükleniyor…</p>";
   try { const r = (await A("admin_recent")).rows;
-    $("#recSq").innerHTML = r.map((p, i) => `<div class="row"><span></span><div>${new Date(p.at).toLocaleString()} · <b>${money(p.total)}</b> · ${esc(p.method)}<div class="small">${p.lines.map((l) => esc(l.name)).join(", ")}</div></div><button class="chip" onclick="printSq(${i})">Receipt</button></div>`).join("") || "<p class='small'>No payments yet.</p>"; window.__sq = r;
+    $("#recSq").innerHTML = r.map((p, i) => `<div class="row"><span></span><div>${new Date(p.at).toLocaleString()} · <b>${money(p.total)}</b> · ${esc(p.method)}<div class="small">${p.lines.map((l) => esc(l.name)).join(", ")}</div></div><button class="chip" onclick="printSq(${i})">Fiş</button></div>`).join("") || "<p class='small'>Henüz ödeme yok.</p>"; window.__sq = r;
   } catch (e) { $("#recSq").innerHTML = `<p class="small">${esc(e.message)}</p>`; }
   try { const c = (await A("admin_receipts")).rows; window.__rc = c;
-    $("#recCash").innerHTML = c.map((x, i) => `<div class="row"><span></span><div>R${x.id} · ${new Date(x.created_at).toLocaleString()} · <b>${money(x.total_cents)}</b> · ${esc(x.method || "")}<div class="small">${x.lines.map((l) => esc(l.name)).join(", ")}</div></div><button class="chip" onclick="reprint(${i})">Reprint</button></div>`).join("") || "<p class='small'>No receipts yet.</p>";
+    $("#recCash").innerHTML = c.map((x, i) => `<div class="row"><span></span><div>R${x.id} · ${new Date(x.created_at).toLocaleString()} · <b>${money(x.total_cents)}</b> · ${esc(x.method || "")}<div class="small">${x.lines.map((l) => esc(l.name)).join(", ")}</div></div><button class="chip" onclick="reprint(${i})">Tekrar yazdır</button></div>`).join("") || "<p class='small'>Henüz fiş yok.</p>";
   } catch (e) { $("#recCash").innerHTML = `<p class="small">${esc(e.message)}</p>`; }
 }
 function drawRec() { const tot = REC.reduce((t, l) => t + Math.round(l.price * 100), 0);
@@ -437,6 +456,7 @@ function drawRec() { const tot = REC.reduce((t, l) => t + Math.round(l.price * 1
 $("#recScan").addEventListener("keydown", async (e) => { if (e.key !== "Enter") return; const v = e.target.value.trim().toUpperCase(); e.target.value = ""; if (!v) return;
   if (!INV.length) INV = (await A("admin_list")).items;
   const x = INV.find((i) => i.sku.toUpperCase() === v); if (!x) return toast("No piece with SKU " + v);
+  if (x.qty <= 0 && !x.sku.startsWith("HC-G-")) return toast("Bu ürünün stoğu yok");
   if (REC.some((l) => l.id === x.id) && !x.sku.startsWith("HC-G-")) return toast("Already added");
   let price = x.price / 100; if (!price) { price = +prompt(`Price for ${x.title}?`) || 0; }
   REC.push({ id: x.sku.startsWith("HC-G-") ? null : x.id, name: x.title, sku: x.sku, price }); drawRec(); });
