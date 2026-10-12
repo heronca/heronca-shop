@@ -142,23 +142,26 @@ footer .small{color:rgba(255,255,255,.6)}
 @media(max-width:560px){.hero-shade{background:linear-gradient(0deg,var(--sand) 8%,rgba(0,0,0,0) 75%)}.hero.has-video .wrap{justify-content:flex-end}.hero.has-video .bird{opacity:.35}}
 @media(prefers-reduced-motion:reduce){.hero-bg{animation:none}}
 
-/* Primary navigation stays prominent and touch-friendly on every storefront page. */
+/* Editorial primary navigation: generous type, open spacing, restrained rules. */
 header.top .bar{height:80px}
-header.top .menu{display:flex;gap:8px}
-header.top .menu a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:86px;padding:10px 22px;border:1px solid #d8cebc;border-radius:999px;background:var(--sand);color:var(--ink);font-size:15px;font-weight:500;letter-spacing:.02em;text-decoration:none;transition:background .18s ease,border-color .18s ease}
-header.top .menu a:hover{background:#e1d7c6;border-color:var(--ink)}
-header.top .menu a[href="/about.html#visit"]{background:var(--brick);border-color:var(--brick);color:#fff}
-header.top .menu a[href="/about.html#visit"]:hover{background:#7d2e23;border-color:#7d2e23}
-header.top .menu a:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
+header.top .right{gap:32px}
+header.top .menu{display:flex;align-items:center;gap:32px}
+header.top .menu a{display:inline-flex;align-items:center;justify-content:center;position:relative;min-height:48px;padding:6px 0;background:transparent;border:0;border-radius:0;color:var(--ink);font:500 26px/1.1 'Cormorant Garamond',Georgia,serif;letter-spacing:-.015em;text-decoration:none}
+header.top .menu a::after{content:"";position:absolute;left:0;right:0;bottom:3px;height:1px;background:var(--brick);transform:scaleX(0);transform-origin:left;transition:transform .2s ease}
+header.top .menu a:hover{color:var(--brick)}
+header.top .menu a:hover::after,body.about-page header.top .menu a[href="/about.html"]::after,body.home-page header.top .menu a[href="/"]::after{transform:scaleX(1)}
+header.top .menu a[href="/about.html#visit"]{color:var(--ink)}
+header.top .menu a:focus-visible{outline:2px solid var(--brick);outline-offset:6px}
 section[id]{scroll-margin-top:144px}
 @media(max-width:640px){
-  header.top .bar{display:grid;grid-template-columns:1fr auto;gap:8px 12px;height:auto;min-height:116px;padding-top:10px;padding-bottom:10px}
+  header.top .bar{display:grid;grid-template-columns:1fr auto;gap:6px 12px;height:auto;min-height:120px;padding-top:10px;padding-bottom:0}
   header.top .logo{grid-column:1;grid-row:1;align-self:center}
   header.top .logo img{height:28px;width:auto;max-width:100%}
   header.top .right{display:contents}
   header.top .bag{grid-column:2;grid-row:1;min-height:42px;padding:10px 16px}
-  header.top .menu{grid-column:1/-1;grid-row:2;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:100%}
-  header.top .menu a{min-width:0;min-height:44px;padding:10px 12px;font-size:15px}
+  header.top .menu{grid-column:1/-1;grid-row:2;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;width:100%;border-top:1px solid var(--line)}
+  header.top .menu a{min-width:0;min-height:58px;padding:10px 0;font-size:27px}
+  header.top .menu a::after{left:25%;right:25%;bottom:8px}
   section[id],body.about-page section[id]{scroll-margin-top:184px}
 }
-@media(prefers-reduced-motion:reduce){header.top .menu a{transition:none}}
+@media(prefers-reduced-motion:reduce){header.top .menu a::after{transition:none}}
