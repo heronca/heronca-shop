@@ -1,0 +1,40 @@
+/* Seasons rise beside the Heron bird in the existing aerial hero. */
+.hero .wrap{padding-right:300px;min-height:390px}
+.hero .bird{right:156px;bottom:18px;height:270px;opacity:.28}
+.collection-picker{position:absolute;right:32px;bottom:34px;z-index:3}
+.season-options{display:flex;flex-direction:column-reverse;align-items:flex-start;gap:5px}
+.season-options button{appearance:none;font:400 23px/1.2 'Cormorant Garamond',Georgia,serif;background:none;border:0;border-bottom:1px solid transparent;border-radius:0;color:var(--ink);padding:8px 0;cursor:pointer;min-height:44px}
+.season-options button[aria-pressed=true]{color:var(--brick);border-bottom-color:var(--brick)}
+.season-options button:hover{color:var(--brick)}
+.hero.has-video .collection-picker{background:rgba(251,250,247,.88);padding:12px 20px}
+.hero.has-video .bird{right:168px}
+.hero-actions{max-width:470px}
+#rack{scroll-margin-top:140px}
+#rack .head{margin-top:28px}
+#rack .head h2{font-weight:400}
+.collection-picker[hidden]{display:none}
+@media(max-width:759px){
+ .hero .wrap{padding-right:230px;min-height:370px}
+ .hero h1{font-size:52px}
+ .hero .bird{right:122px;height:200px;bottom:24px}
+ .collection-picker{right:16px;bottom:26px}
+ .season-options button{font-size:21px}
+ .hero.has-video .bird{right:136px}
+ .hero.has-video .collection-picker{padding:10px 14px}
+ .hero-actions{flex-direction:column}
+ .hero-actions .btn{flex:none}
+}
+@media(max-width:520px){
+ .hero .wrap{padding-right:145px;padding-top:30px;padding-bottom:30px;min-height:420px}
+ .hero h1{font-size:44px}
+ .hero p{font-size:13px}
+ .hero .bird{right:114px;bottom:28px;height:130px;opacity:.18}
+ .hero.has-video .bird{right:126px;opacity:.35}
+ .collection-picker{bottom:32px}
+ .season-options button{font-size:20px}
+ .hero-actions{gap:8px;margin-top:20px;max-width:180px}
+ .hero-actions .btn{font-size:10px;letter-spacing:.04em;padding:12px 8px}
+ .hero-actions span{margin-left:4px}
+}
+.rack-meta{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.all-pieces{border:0;background:none;font:inherit;font-size:12px;padding:6px 0;cursor:pointer;color:var(--ink);text-decoration:underline;text-underline-offset:4px}

@@ -6,14 +6,21 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Jost:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/heron.css?v=15">
-<link rel="stylesheet" href="/assets/editorial.css?v=1"></head>
+<link rel="stylesheet" href="/assets/editorial.css?v=1"><link rel="stylesheet" href="/assets/seasons.css?v=1"></head>
 <body class="home-page">
 <section class="hero" id="hero"><div class="wrap"><div class="caps">Venice Beach, California</div>
   <h1>Vintage.<br>New. Ours.</h1><p>Curated vintage, new with tags finds and our own Coastal Apparel. Most pieces are one of one.</p>
   <div class="hero-actions"><a class="btn" href="/about.html">About Heron CA <span aria-hidden="true">↗</span></a><a class="btn alt" href="/about.html#visit">Visit the shop <span aria-hidden="true">↗</span></a></div>
-  <img class="bird" src="/assets/heron-bird.png" alt=""></div></section>
-<main class="wrap">
-  <div class="head"><h2 id="title">New arrivals</h2><span class="small" id="count"></span></div>
+  <img class="bird" src="/assets/heron-bird.png" alt=""><nav class="collection-picker" aria-label="Seasonal collections">
+    <div class="season-options" role="group" aria-label="Choose a collection">
+      <button type="button" data-season="spring">Spring</button>
+      <button type="button" data-season="summer">Summer</button>
+      <button type="button" data-season="fall">Fall</button>
+      <button type="button" data-season="winter">Winter</button>
+    </div>
+  </nav></div></section>
+<main class="wrap" id="rack">
+  <div class="head"><h2 id="title">New arrivals</h2><div class="rack-meta"><button class="all-pieces" type="button" data-season="all" aria-pressed="true">All pieces</button><span class="small" id="count"></span></div></div>
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px" id="bands"></div>
   <div class="grid" id="grid"><p class="empty">Loading the rack…</p></div>
   <div id="rackMore" hidden style="text-align:center;margin:32px 0">
@@ -38,42 +45,5 @@
   </section>
 </main>
 <script src="/assets/heron.js?v=14"></script>
-<script>
-chrome();
-const q = new URLSearchParams(location.search), cat = q.get("c") || "", band = q.get("p") || "";
-const BANDS = [["", "Any price"], ["u25", "Under $25"], ["25-50", "$25 to $50"], ["50-100", "$50 to $100"], ["100", "$100 and up"]];
-const inBand = (c) => !band || (band === "u25" ? c < 2500 : band === "25-50" ? c >= 2500 && c < 5000 : band === "50-100" ? c >= 5000 && c < 10000 : c >= 10000);
-$("#bands").innerHTML = BANDS.map(([v, l]) => { const p = new URLSearchParams(q); v ? p.set("p", v) : p.delete("p"); return `<a class="chip${v === band ? " on" : ""}" href="?${p}">${l}</a>`; }).join("");
-if (cat) { $("#title").textContent = cat; $("#hero").hidden = true; }
-function renderRack(list) {
-  const grid = $("#grid"), more = $("#rackMore"), progress = $("#rackProgress");
-  grid.innerHTML = "";
-  more.hidden = true;
-  if (!list.length) { grid.innerHTML = `<p class="empty">Nothing here right now. New pieces land every week.</p>`; return; }
-  let shown = 0, observer;
-  function loadNext() {
-    if (shown >= list.length) return;
-    const next = list.slice(shown, shown + 20);
-    grid.insertAdjacentHTML("beforeend", next.map(card).join(""));
-    shown += next.length;
-    progress.textContent = `${shown} of ${list.length} pieces shown`;
-    more.hidden = shown >= list.length;
-    $("#loadMore").textContent = `Load ${Math.min(20, list.length - shown)} more pieces`;
-    if (more.hidden) observer?.disconnect();
-  }
-  $("#loadMore").onclick = loadNext;
-  loadNext();
-  if (!more.hidden && "IntersectionObserver" in window) {
-    observer = new IntersectionObserver(entries => {
-      if (entries.some(entry => entry.isIntersecting)) loadNext();
-    }, { rootMargin: "320px 0px" });
-    observer.observe(more);
-  }
-}
-shop().then((s) => {
-  const list = s.items.filter((x) => (!cat || x.category === cat) && inBand(x.site_price));
-  $("#count").textContent = `${list.filter((x) => !x.sold).length} pieces · ${s.discount}% off online, multi-buy deals in your bag`;
-  renderRack(list);
-}).catch(() => ($("#grid").innerHTML = `<p class="empty">The rack is taking a break. Please try again in a minute.</p>`));
-</script>
+<script src="/assets/seasons.js?v=1"></script>
 </body></html>
