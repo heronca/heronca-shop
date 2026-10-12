@@ -16,6 +16,10 @@
   <div class="head"><h2 id="title">New arrivals</h2><span class="small" id="count"></span></div>
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px" id="bands"></div>
   <div class="grid" id="grid"><p class="empty">Loading the rack…</p></div>
+  <div id="rackMore" hidden style="text-align:center;margin:32px 0">
+    <button class="chip" id="loadMore" type="button" aria-controls="grid">Load 20 more pieces</button>
+    <p class="small" id="rackProgress" role="status" aria-live="polite"></p>
+  </div>
 
   <div id="aerial" hidden style="margin:72px 0 -48px"></div>
   <section class="visit" id="visit">
@@ -41,10 +45,35 @@ const BANDS = [["", "Any price"], ["u25", "Under $25"], ["25-50", "$25 to $50"],
 const inBand = (c) => !band || (band === "u25" ? c < 2500 : band === "25-50" ? c >= 2500 && c < 5000 : band === "50-100" ? c >= 5000 && c < 10000 : c >= 10000);
 $("#bands").innerHTML = BANDS.map(([v, l]) => { const p = new URLSearchParams(q); v ? p.set("p", v) : p.delete("p"); return `<a class="chip${v === band ? " on" : ""}" href="?${p}">${l}</a>`; }).join("");
 if (cat) { $("#title").textContent = cat; $("#hero").hidden = true; }
+function renderRack(list) {
+  const grid = $("#grid"), more = $("#rackMore"), progress = $("#rackProgress");
+  grid.innerHTML = "";
+  more.hidden = true;
+  if (!list.length) { grid.innerHTML = `<p class="empty">Nothing here right now. New pieces land every week.</p>`; return; }
+  let shown = 0, observer;
+  function loadNext() {
+    if (shown >= list.length) return;
+    const next = list.slice(shown, shown + 20);
+    grid.insertAdjacentHTML("beforeend", next.map(card).join(""));
+    shown += next.length;
+    progress.textContent = `${shown} of ${list.length} pieces shown`;
+    more.hidden = shown >= list.length;
+    $("#loadMore").textContent = `Load ${Math.min(20, list.length - shown)} more pieces`;
+    if (more.hidden) observer?.disconnect();
+  }
+  $("#loadMore").onclick = loadNext;
+  loadNext();
+  if (!more.hidden && "IntersectionObserver" in window) {
+    observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) loadNext();
+    }, { rootMargin: "320px 0px" });
+    observer.observe(more);
+  }
+}
 shop().then((s) => {
   const list = s.items.filter((x) => (!cat || x.category === cat) && inBand(x.site_price));
   $("#count").textContent = `${list.filter((x) => !x.sold).length} pieces · ${s.discount}% off online, multi-buy deals in your bag`;
-  $("#grid").innerHTML = list.length ? list.map(card).join("") : `<p class="empty">Nothing here right now. New pieces land every week.</p>`;
+  renderRack(list);
 }).catch(() => ($("#grid").innerHTML = `<p class="empty">The rack is taking a break. Please try again in a minute.</p>`));
 </script>
 </body></html>
