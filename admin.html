@@ -30,11 +30,12 @@
 <details class="panel"><summary>Fotoğrafları toplu tamamla</summary><p class="small">SKU ve ürün adı eşleşen mevcut kayıtlara fotoğraf ekler. Stok ve fiyatları değiştirmez; fotoğrafı olanları atlar.</p><label for="photoPackage">Fotoğraf eşleştirme paketi (JSON)</label><textarea id="photoPackage" spellcheck="false" placeholder='[{"sku":"HC-V-…","title":"…","images":["https://…"]}]'></textarea><button id="photoRepair" class="btn" onclick="repairPhotos()">Eşleşen fotoğrafları ekle</button><div id="photoRepairInfo" class="small" role="status" style="margin-top:12px"></div></details></section>
 <section id="t-add" hidden><div class="pagehead"><div><h1>Ürün ekle</h1><p>Square’a kaydedilir. Siteye çıkarmak için Yayın sırası bölümünden onayla.</p></div></div><div class="formbody"><div class="panel"><h2>Fotoğraflar</h2><label for="photos">İlk fotoğraf ürünün kapak görselidir</label><input id="photos" type="file" accept="image/*" multiple><div class="thumbs" id="thumbs"></div></div><div class="panel"><h2>Ürün bilgileri</h2><label for="title">Ürün adı</label><input id="title" placeholder="Vince Silk Slip Dress, Black"><div class="two"><div><label for="category">Kategori</label><select id="category"></select></div><div><label for="size">Beden</label><input id="size" placeholder="M"></div></div><div class="two"><div><label for="price">Mağaza ve site fiyatı ($)</label><input id="price" type="number" inputmode="decimal" step="0.01" min="0.01"></div><div><label for="cond">Ürün durumu</label><select id="cond"><option value="New with tags">Etiketli yeni</option><option value="New without tags">Etiketsiz yeni</option><option value="Pre-owned, excellent" selected>İkinci el · çok iyi</option><option value="Pre-owned, good">İkinci el · iyi</option><option value="Vintage">Vintage</option></select></div></div><p class="small" id="siteprice" style="margin-top:10px"></p><label for="desc">Açıklama</label><textarea id="desc" placeholder="Kumaş, ölçüler, detaylar…"></textarea><details><summary>Konsinye ve özel SKU</summary><label class="rowcheck"><input type="checkbox" id="consign">Konsinye · %50 ürün sahibine, HC-K ile başlayan SKU</label><label for="sku">SKU · otomatik oluşturulması için boş bırak</label><input id="sku" placeholder="HC-V-DR-0001"></details></div><button class="btn" id="save" onclick="save()">Ürünü kaydet</button></div></section>
 <section id="t-imp" hidden><div class="pagehead"><div><h1>eBay aktarımı</h1><p>Aktif ilanları mevcut Square ürünleriyle eşleştir ve eksikleri tamamla.</p></div></div><div id="ebayStatus" class="note warning" role="status">eBay bağlantısı kontrol ediliyor…</div><div class="panel"><h2><span class="stepnumber">1</span>Aktif ilan dosyasını seç</h2><p class="small" style="margin:10px 0 15px">eBay → Reports → Active listings CSV. Mevcut fiyat ve stok korunur. Yeni fiyatlar eBay fiyatının 1,30’a bölünmesiyle hesaplanır.</p><input id="csv" type="file" accept=".csv" aria-label="eBay aktif ilan CSV dosyası"><details><summary>CSV metnini yapıştır</summary><label for="csvText">Sütun başlıkları dahil tüm CSV içeriği</label><textarea id="csvText" spellcheck="false" placeholder="Item number,Title,Available quantity,Currency,Current price…"></textarea><button class="btn alt" id="csvRead" onclick="loadImportCSV($('#csvText').value)">Dosyayı incele</button></details></div><div class="panel"><h2><span class="stepnumber">2</span>Kontrol et ve aktar</h2><div id="impInfo" class="small" role="status" style="margin:15px 0">Başlamak için bir CSV dosyası seç.</div><details id="conAsk" hidden><summary>Bu dosyada konsinye ürün var mı?</summary><p class="small">Varsa işaretle. HC-K SKU oluşturulur, %50 ürün sahibine ayrılır.</p><div id="conList" style="max-height:260px;overflow:auto;margin-top:8px"></div></details><div class="toolbar" style="margin:18px 0 0"><button class="btn" id="impGo" disabled onclick="runImport()">Aktar / başarısızları yeniden dene</button><button class="btn alt" id="impStop" hidden onclick="IMPORT_STOP=true;this.disabled=true">Bu üründen sonra durdur</button><button class="btn alt" id="picGo" disabled onclick="runPhotos()">Eksik kapakları yeniden dene</button></div><p class="footerhint">İşlem boyunca bu sayfayı açık tut. Fotoğraf alınamayan ürünler aşağıda hata nedeni ile görünür.</p></div><div class="panel"><div class="panelhead"><h2><span class="stepnumber">3</span>Sonuçlar</h2><button class="chip" id="impDownload" hidden onclick="downloadImportResults()">Sonuçları indir</button></div><div id="impResults" aria-live="polite"><p class="small">Aktarım sonuçları burada görünecek.</p></div></div></section>
-<section id="t-sales" hidden><div class="pagehead"><div><h1>Satışlar</h1><p>Başka kanalda satılan ürünlerin site ve Square stoklarını güncelle.</p></div></div><div class="panel formbody"><h2>Flyp satış raporunu işle</h2><p class="small" style="margin:10px 0 18px">Flyp’ten indirdiğin XLSX veya CSV satış raporunu seç. Önce eşleşmeleri gösterir; onayladığında stok düşer.</p><input id="sales" type="file" accept=".xlsx,.csv" aria-label="Flyp satış raporu"><div id="salesInfo" class="small" role="status" style="margin-top:15px"></div><div id="salesReview" class="inv"></div><button id="salesApply" class="btn" hidden onclick="applySales()" style="margin-top:16px">Eşleşenleri satıldı işaretle</button></div><div class="note small">Sitede veya Square’da satılan bir ürünü Flyp henüz otomatik kapatmıyor. Bu bağlantı kurulana kadar Flyp’te “Mark as sold &amp; Delist → Sold on Other” kullan.</div><button class="btn alt" onclick="navigate('rec')">Kasa ve fişleri aç →</button></section>
+<section id="t-sales" hidden><div class="pagehead"><div><h1>Satışlar</h1><p>Başka kanalda satılan ürünlerin site ve Square stoklarını güncelle.</p></div></div><div class="panel formbody"><h2>Flyp satış raporunu işle</h2><p class="small" style="margin:10px 0 18px">Flyp’ten indirdiğin XLSX veya CSV satış raporunu seç. Önce eşleşmeleri gösterir; onayladığında stok düşer.</p><input id="sales" type="file" accept=".xlsx,.csv" aria-label="Flyp satış raporu"><div id="salesInfo" class="small" role="status" style="margin-top:15px"></div><div id="salesReview" class="inv"></div><button id="salesApply" class="btn" hidden onclick="applySales()" style="margin-top:16px">Eşleşenleri satıldı işaretle</button></div><div class="note small">Flyp bağlantısını Ayarlar’dan kur ve durumunu kontrol et. Bağlantı kapalıysa satış sonrası Flyp’te “Mark as sold &amp; Delist → Other” kullan.</div><button class="btn alt" onclick="navigate('rec')">Kasa ve fişleri aç →</button></section>
 <section id="t-pub" hidden><div class="pagehead"><div><h1>Yayın sırası</h1><p>Yeni eklenen ürünleri onayla veya günlere yay.</p></div></div><div class="panel"><div class="toolbar"><button class="chip" onclick="document.querySelectorAll('.pq').forEach(c=>c.checked=true)">Taslakları seç</button><button class="btn" onclick="pubSet('now')">Şimdi yayınla</button></div><details><summary>Günlük yayın planla</summary><div class="toolbar"><label>Günde <input id="pubPer" type="number" value="1" min="1" style="width:70px"></label><label>Başlangıç <input id="pubStart" type="date"></label><button class="btn alt" onclick="pubSet('daily')">Planla</button></div></details><div class="inv" id="pubList"></div></div></section>
 <section id="t-off" hidden><div class="pagehead"><div><h1>Teklifler</h1><p>Müşterilerin ürün ve paket fiyat teklifleri.</p></div></div><div class="panel"><p class="small" style="margin-bottom:15px">Kabul ettiğinde ödeme bağlantısı oluşturulur. Müşteriye göndermeden önce e-posta taslağını kontrol et.</p><div id="offList" class="inv"></div></div></section>
 <section id="t-rec" hidden><div class="pagehead"><div><h1>Kasa ve fişler</h1><p>Barkod okut, satışı işle ve fiş yazdır.</p></div></div><div class="panel formbody"><label for="recScan">Ürün barkodu / SKU · Enter ile ekle</label><input id="recScan" placeholder="HC-V-DR-0001"><details><summary>Elle satır ekle</summary><div class="toolbar"><input id="recName" placeholder="Örn. kargo ücreti" aria-label="Fiş satırı açıklaması"><input id="recPrice" type="number" step="0.01" placeholder="$" aria-label="Fiş satırı fiyatı" style="width:100px;flex:0 1 100px"><button class="chip" onclick="recAddManual()">Ekle</button></div></details><div id="recLines" class="inv" style="margin:15px 0"></div><div class="two"><div><label for="recMethod">Ödeme</label><select id="recMethod"><option value="Cash">Nakit</option><option value="Card (POS)">Kart / POS</option><option value="Other">Diğer</option></select></div><div><label for="recNote">Not</label><input id="recNote" placeholder="İsteğe bağlı"></div></div><div class="toolbar" style="margin-top:20px"><button class="btn" onclick="recSave(true)">Satıldı işaretle ve fiş yazdır</button><button class="btn alt" onclick="recSave(false)">Yalnızca fiş yazdır</button></div><p class="small">Square’da işlenen bir satışı tekrar düşürme; yalnızca fiş yazdır seçeneğini kullan.</p></div><div class="panel"><h2>Son Square ödemeleri</h2><div id="recSq" class="inv" style="margin-top:12px"></div></div><div class="panel"><div class="panelhead"><h2>Basılmış fişler</h2><button class="chip" onclick="recCsv()">CSV indir</button></div><div id="recCash" class="inv"></div></div></section>
-<section id="t-settings" hidden><div class="pagehead"><div><h1>Ayarlar</h1><p>Mağaza araçları ve yedekleme.</p></div></div><div class="panel formbody"><h2>Mağazaya özel barkod kataloğu</h2><p class="small" style="margin:10px 0 16px">Takı, havlu ve küçük aksesuarlar için ortak barkodlar. Siteye çıkmaz; adet takibi yapılmaz.</p><button class="btn alt" onclick="navigate('cat')">Barkod kataloğunu düzenle →</button></div><div class="panel formbody"><h2>Fotoğraf yedeği</h2><p class="small" style="margin:10px 0 16px">Fotoğrafları JSON olarak indir. Geri yükleme, bu tarayıcıdaki yedeği kullanır.</p><div class="toolbar"><button class="btn alt" onclick="savePhotos()">Yedeği indir</button><button class="btn alt" onclick="restorePhotos()">Eksik fotoğrafları geri yükle</button></div><div id="bkInfo" class="small" role="status"></div></div></section>
+<section id="t-settings" hidden><div class="pagehead"><div><h1>Ayarlar</h1><p>Mağaza araçları ve yedekleme.</p></div></div><div class="panel" id="bridgePanel"><div class="panelhead"><div><h2>Flyp ↔ Site / Square</h2><p class="small">Bu Mac üzerinden stok bağlantısı · eBay API hesabı gerekmez.</p></div><span class="badge muted" id="bridgeBadge">Kurulum bekliyor</span></div><p id="bridgeStatus" class="small" role="status">Heron Chrome yardımcısını yükledikten sonra bu sayfayı Chrome’da açık tut.</p><div class="toolbar" style="margin-top:16px"><button class="btn" id="bridgeStart" disabled onclick="bridgeControl('start')">Bağlantıyı aç</button><button class="btn alt" id="bridgeRun" disabled onclick="bridgeControl('run')">Şimdi kontrol et</button><button class="btn alt" id="bridgeStop" disabled onclick="bridgeControl('stop')">Duraklat</button><button class="chip" onclick="loadBridge()">Kayıtları yenile</button></div><p class="small">Mac uyanık, Chrome ve Flyp oturumları açık olmalı. Yardımcı 2 dakikada bir kontrol eder; Flyp’in satış algılama ve delist süreleri ayrıca geçerlidir. İlk taramadaki eski satışlar onay bekler.</p><div id="bridgeError" class="note warning" hidden role="alert"></div><div id="bridgeCounts" class="note small">Henüz onaylı ürün eşleşmesi yok.</div><details><summary>Ürünleri eşleştir <span id="bridgeCandidateN"></span></summary><p class="small" style="margin:12px 0">İsim eşleşmeleri öneridir. Fotoğrafları, ürünü ve SKU’yu kontrol ederek kutuları seç. Onaylanan Flyp kimliği sonraki satışlarda kullanılır; aynı isimli ürünler otomatik eşleşmez.</p><div id="bridgeCandidates" class="inv"></div><label style="display:flex;align-items:center;gap:8px;margin:16px 0"><input type="checkbox" id="bridgeReviewed">Seçtiğim ürünlerin aynı ürün olduğunu kontrol ettim.</label><button class="btn" onclick="saveBridgeLinks()">Seçilen eşleşmeleri onayla</button></details><details style="margin-top:16px"><summary>Satış işlemleri ve bekleyen kontroller</summary><div id="bridgeJobs" class="inv"></div></details><details style="margin-top:16px"><summary>Onaylı ürün bağlantıları</summary><div id="bridgeLinks" class="inv"></div></details></div>
+<div class="panel formbody"><h2>Mağazaya özel barkod kataloğu</h2><p class="small" style="margin:10px 0 16px">Takı, havlu ve küçük aksesuarlar için ortak barkodlar. Siteye çıkmaz; adet takibi yapılmaz.</p><button class="btn alt" onclick="navigate('cat')">Barkod kataloğunu düzenle →</button></div><div class="panel formbody"><h2>Fotoğraf yedeği</h2><p class="small" style="margin:10px 0 16px">Fotoğrafları JSON olarak indir. Geri yükleme, bu tarayıcıdaki yedeği kullanır.</p><div class="toolbar"><button class="btn alt" onclick="savePhotos()">Yedeği indir</button><button class="btn alt" onclick="restorePhotos()">Eksik fotoğrafları geri yükle</button></div><div id="bkInfo" class="small" role="status"></div></div></section>
 <section id="t-cat" hidden><div class="pagehead"><div><h1>Barkod kataloğu</h1><p>Her satır: Ürün adı | Fiyat | KOD. Fiyat boşsa kasada girilir.</p></div><button class="btn alt" onclick="navigate('settings')">Geri</button></div><div class="panel formbody"><textarea id="gen" style="min-height:350px;font-family:monospace;font-size:13px">2 Rings | 5 | RING2
 Earrings | 5 | EAR
 Necklace | 5 | NECK
@@ -60,13 +61,14 @@ function navigate(view) {
   if (!VIEWS.includes(view)) view = "home";
   VIEWS.forEach(t => $("#t-"+t).hidden = t !== view);
   document.querySelectorAll(".tabs [data-t]").forEach(b => { b.classList.toggle("on", b.dataset.t===view || (view==="cat" && b.dataset.t==="settings")); b.setAttribute("aria-current",b.classList.contains("on")?"page":"false"); });
+  if(view==="settings")loadBridge();
   if (view==="home") loadHome(); if (view==="inv") loadInv(); if (view==="imp") loadEbayStatus();
   if (view==="pub") loadPub(); if (view==="off") loadOff(); if (view==="rec") loadRec();
 }
 document.querySelectorAll(".tabs [data-t]").forEach(b => b.onclick=()=>navigate(b.dataset.t));
 async function login() {
   PW = $("#pw").value || PW; $("#loginBtn").disabled=true; $("#loginError").textContent="";
-  try { const r=await A("admin_list"); INV=r.items; sessionStorage.setItem("heron-pw",PW); $("#login").hidden=true; $("#app").hidden=false; await loadHome(r.items); }
+  try { const r=await A("admin_list"); INV=r.items; sessionStorage.setItem("heron-pw",PW); $("#login").hidden=true; $("#app").hidden=false; await loadHome(r.items); if(location.hash==="#settings")navigate("settings"); }
   catch(e){ $("#loginError").textContent=e.message; }
   finally { $("#loginBtn").disabled=false; }
 }
@@ -109,7 +111,7 @@ async function loadHome(items) {
     loadEbayStatus();
   }catch(e){$("#homeError").innerHTML=`<div class="note warning">Ürünler alınamadı: ${esc(e.message)} <button class="quiet" onclick="loadHome()">Yeniden dene</button></div>`;$("#squareBadge").textContent="Erişilemiyor";}
 }
-if(PW)login();
+
 
 // photos: crop to 4:5, max 1600px wide, jpeg
 function prep(file) { return new Promise((ok, no) => { const img = new Image(); img.onload = () => {
@@ -489,4 +491,85 @@ async function printReceipt(r, already) {
   w.document.close();
 }
 window.addEventListener("beforeunload", e=>{if(IMPORT_BUSY||$("#photoRepair").disabled){e.preventDefault();e.returnValue="";}});
+// Narrow bridge for the installed extension. The password never leaves A().
+let BRIDGE_STATE=null, BRIDGE_SNAPSHOT=null, BRIDGE_CANDIDATES=[];
+const BRIDGE_ACTIONS=new Set(['admin_bridge_snapshot','admin_bridge_observe','admin_bridge_check','admin_bridge_ack']);
+window.addEventListener('message',async event=>{
+  if(event.source!==window||event.origin!==location.origin)return;
+  const m=event.data;
+  if(m?.source==='heron-stock-state'){
+    BRIDGE_STATE=m.state;drawBridgeState();
+    if(!$('#t-settings').hidden && !document.querySelector('#bridgeCandidates input:checked'))drawBridgeCandidates();
+  }
+  if(m?.source!=='heron-stock-request'||typeof m.id!=='string'||!BRIDGE_ACTIONS.has(m.action))return;
+  let response;
+  try{
+    if(localStorage.getItem('heron-bridge-allowed')!=='1')throw Error('Ayarlar → Flyp bağlantısı → Bağlantıyı aç seçeneğini kullan.');
+    if(!PW || $('#app').hidden)throw Error('Heron yönetimine yeniden giriş yap.');
+    response={result:await A(m.action,m.data||{})};
+  }catch(e){response={error:e.message};}
+  window.postMessage({source:'heron-stock-response',id:m.id,...response},location.origin);
+});
+function bridgeControl(command){
+  if(command==='start'){
+    if(!BRIDGE_STATE)return toast('Önce Heron Chrome yardımcısını yükle ve sayfayı yenile.');
+    localStorage.setItem('heron-bridge-allowed','1');
+  }
+  if(command==='stop')localStorage.removeItem('heron-bridge-allowed');
+  window.postMessage({source:'heron-stock-control',command},location.origin);
+}
+function drawBridgeState(){
+  const s=BRIDGE_STATE;if(!s)return;
+  const stale=s.enabled&&(!s.lastSuccess||Date.now()-Date.parse(s.lastSuccess)>6*60_000);
+  $('#bridgeBadge').textContent=s.enabled?(stale?'İlk kontrol / kontrol gerekli':'Çalışıyor'):'Kapalı';
+  $('#bridgeBadge').className='badge '+(s.enabled&&!stale?'':'warn');
+  $('#bridgeStatus').textContent=(s.phase||'Yardımcı hazır')+(s.lastSuccess?' · Son başarılı kontrol: '+new Date(s.lastSuccess).toLocaleString('tr-TR'):'')+(s.summary?' · '+s.summary:'');
+  $('#bridgeStart').disabled=!!s.enabled;$('#bridgeRun').disabled=!s.enabled;$('#bridgeStop').disabled=!s.enabled;
+  $('#bridgeError').hidden=!s.error;$('#bridgeError').textContent=s.error||'';
+}
+function bridgeCandidates(items,observations,links){
+  const norm=s=>String(s??'').trim().toLowerCase().replace(/\s+/g,' ');
+  return items.filter(x=>/^HC-[VK]-/.test(x.sku)&&x.variation_count===1&&x.qty<=1&&!links.some(l=>l.variation_id===x.id)).map(x=>{
+    const found=observations.filter(o=>norm(o.title)===norm(x.title)&&!links.some(l=>l.flyp_id===o.id));
+    const ambiguous=items.filter(y=>norm(y.title)===norm(x.title)).length>1||found.length>1;
+    return {item:x,flyp:found.length===1&&!ambiguous?found[0]:null,reason:ambiguous?'Aynı isimde birden fazla ürün · elle kontrol gerekli':'Flyp’te eşleşme bulunamadı'};
+  });
+}
+function drawBridgeCandidates(){
+  if(!BRIDGE_SNAPSHOT)return;
+  const obs=BRIDGE_STATE?.observations||[];
+  if(!obs.length){$('#bridgeCandidates').innerHTML='<p class="small">Yardımcı yüklendikten sonra ilk taramayı başlat. Henüz Flyp taraması yok.</p>';return;}
+  BRIDGE_CANDIDATES=bridgeCandidates(BRIDGE_SNAPSHOT.items,obs,BRIDGE_SNAPSHOT.links);
+  $('#bridgeCandidateN').textContent='· '+BRIDGE_CANDIDATES.filter(r=>r.flyp).length+' öneri';
+  $('#bridgeCandidates').innerHTML=BRIDGE_CANDIDATES.map((r,i)=>`<div class="row" style="grid-template-columns:24px minmax(0,1fr) auto"><input type="checkbox" aria-label="${esc(r.item.sku)} eşleşmesini seç" class="bridge-pick" data-index="${i}" ${r.flyp?'':'disabled'}><div><div class="producttitle">${esc(r.item.title)}</div><div class="small">${esc(r.item.sku)} · ${r.flyp?'Flyp: '+esc(r.flyp.id):esc(r.reason)}</div>${r.flyp?`<a class="small" target="_blank" rel="noopener" href="https://tools.joinflyp.com/item/${r.flyp.id}">Flyp ürününü aç ↗</a>`:''}</div><div style="display:flex;gap:8px">${r.item.images[0]?`<img alt="Square ürünü" src="${esc(r.item.images[0])}" width="54" height="66" loading="lazy" style="object-fit:cover">`:''}${r.flyp?.image?`<img alt="Flyp ürünü" src="${esc(r.flyp.image)}" width="54" height="66" loading="lazy" style="object-fit:cover">`:''}</div></div>`).join('')||'<p class="small">Eşleşmemiş tekil ürün yok.</p>';
+}
+async function saveBridgeLinks(){
+  if(!$('#bridgeReviewed').checked)return toast('Önce seçtiğin eşleşmeleri kontrol ettiğini onayla.');
+  const rows=Array.from(document.querySelectorAll('.bridge-pick:checked')).map(c=>BRIDGE_CANDIDATES[Number(c.dataset.index)]).filter(r=>r.flyp).map(r=>({flyp_id:r.flyp.id,variation_id:r.item.id,sku:r.item.sku,title:r.flyp.title}));
+  if(!rows.length)return toast('Önce ürünleri seç.');
+  if(!confirm(`${rows.length} ürün bağlansın mı? Bağlantı açıkken bu ürünlerin doğrulanan satışları stok ve Flyp ilanlarını günceller.`))return;
+  try{const r=await A('admin_bridge_link',{rows,reviewed:true});toast(r.linked+' ürün bağlandı');$('#bridgeReviewed').checked=false;await loadBridge();}catch(e){toast(e.message);}
+}
+async function bridgeReview(id,direction,cancel){
+  let price_cents;
+  if(!cancel){
+    if(direction==='to_square'){if(!confirm('Bu ürünün satıldığını doğruluyor musun? Site ve Square stoğu sıfırlanacak.'))return;}
+    else {const v=prompt('Gerçek ürün satış fiyatı ($):');if(v===null)return;price_cents=Math.round(Number(v)*100);if(!v.trim()||!Number.isSafeInteger(price_cents)||price_cents<0)return toast('Geçerli fiyat gir.');}
+  }
+  try{await A('admin_bridge_review',{id,price_cents,cancel});await loadBridge();}catch(e){toast(e.message);}
+}
+async function loadBridge(){
+  try{
+    BRIDGE_SNAPSHOT=await A('admin_bridge_snapshot');const s=BRIDGE_SNAPSHOT;
+    $('#bridgeCounts').textContent=s.links.filter(l=>l.sku!=='DISABLED').length+' onaylı ürün · '+s.jobs.filter(j=>j.status==='pending').length+' bekleyen satış · '+s.jobs.filter(j=>j.status==='review').length+' kontrol bekleyen';
+    drawBridgeState();drawBridgeCandidates();
+    const labels={pending:'İşlem bekliyor',review:'Onay gerekli',done:'Site / Square güncellendi',marked:'Flyp satıldı · kanal sonuçlarını kontrol et'};
+    $('#bridgeJobs').innerHTML=s.jobs.slice(0,100).map((j,i)=>`<div class="row" style="grid-template-columns:1fr auto"><div>${esc(s.items.find(x=>x.id===j.variation_id)?.title||j.variation_id)}<div class="small">${esc(labels[j.status]||j.status)} · ${esc(j.detail)} · ${new Date(j.sold_at).toLocaleDateString('tr-TR')}</div>${j.status==='marked'?`<a class="small" href="https://tools.joinflyp.com/item/${j.flyp_id}" rel="noopener" target="_blank">Flyp delist sonucunu kontrol et ↗</a>`:''}</div>${j.status==='review'?`<div><button class="chip" data-bridge-review="${i}">Satışı onayla</button><button class="chip" data-bridge-cancel="${i}">İptal</button></div>`:''}</div>`).join('')||'<p class="small">Henüz bağlantı üzerinden işlenen satış yok.</p>';
+    $('#bridgeJobs').querySelectorAll('[data-bridge-review],[data-bridge-cancel]').forEach(b=>b.onclick=()=>{const cancel=b.hasAttribute('data-bridge-cancel'),j=s.jobs[Number(cancel?b.dataset.bridgeCancel:b.dataset.bridgeReview)];bridgeReview(j.id,j.direction,cancel);});
+    $('#bridgeLinks').innerHTML=s.links.map(l=>`<div class="row" style="grid-template-columns:1fr auto"><div>${esc(l.title)}<div class="small">${esc(l.sku)} · ${esc(l.flyp_id)} · ${l.last_seen_at?'Son görüldü '+new Date(l.last_seen_at).toLocaleString('tr-TR'):'İlk kontrol bekliyor'}</div></div><span class="badge muted">${l.sku==='DISABLED'?'Devre dışı':esc(l.last_status)}</span></div>`).join('')||'<p class="small">Ürün eşleşmeleri ilk taramadan sonra onaylanır.</p>';
+  }catch(e){$('#bridgeCounts').textContent='Bağlantı kayıtları alınamadı: '+e.message;}
+}
+window.postMessage({source:'heron-stock-control',command:'status'},location.origin);
+
+if(PW)login();
 </script></body></html>
