@@ -493,6 +493,7 @@ async function printReceipt(r, already) {
 window.addEventListener("beforeunload", e=>{if(IMPORT_BUSY||$("#photoRepair").disabled){e.preventDefault();e.returnValue="";}});
 // Narrow bridge for the installed extension. The password never leaves A().
 let BRIDGE_STATE=null, BRIDGE_SNAPSHOT=null, BRIDGE_CANDIDATES=[];
+const BRIDGE_MANUAL=new Map();
 const BRIDGE_ACTIONS=new Set(['admin_bridge_snapshot','admin_bridge_observe','admin_bridge_check','admin_bridge_ack']);
 window.addEventListener('message',async event=>{
   if(event.source!==window||event.origin!==location.origin)return;
@@ -539,9 +540,11 @@ function drawBridgeCandidates(){
   if(!BRIDGE_SNAPSHOT)return;
   const obs=BRIDGE_STATE?.observations||[];
   if(!obs.length){$('#bridgeCandidates').innerHTML='<p class="small">Yardımcı yüklendikten sonra ilk taramayı başlat. Henüz Flyp taraması yok.</p>';return;}
-  BRIDGE_CANDIDATES=bridgeCandidates(BRIDGE_SNAPSHOT.items,obs,BRIDGE_SNAPSHOT.links);
+  const selected=new Set(Array.from(document.querySelectorAll(".bridge-pick:checked")).map(c=>BRIDGE_CANDIDATES[Number(c.dataset.index)]?.item.sku));
+  BRIDGE_CANDIDATES=bridgeCandidates(BRIDGE_SNAPSHOT.items,obs,BRIDGE_SNAPSHOT.links).map(r=>({...r,flyp:r.flyp||obs.find(o=>o.id===BRIDGE_MANUAL.get(r.item.id)&&!BRIDGE_SNAPSHOT.links.some(l=>l.flyp_id===o.id))||null}));
   $('#bridgeCandidateN').textContent='· '+BRIDGE_CANDIDATES.filter(r=>r.flyp).length+' öneri';
-  $('#bridgeCandidates').innerHTML=BRIDGE_CANDIDATES.map((r,i)=>`<div class="row" style="grid-template-columns:24px minmax(0,1fr) auto"><input type="checkbox" aria-label="${esc(r.item.sku)} eşleşmesini seç" class="bridge-pick" data-index="${i}" ${r.flyp?'':'disabled'}><div><div class="producttitle">${esc(r.item.title)}</div><div class="small">${esc(r.item.sku)} · ${r.flyp?'Flyp: '+esc(r.flyp.id):esc(r.reason)}</div>${r.flyp?`<a class="small" target="_blank" rel="noopener" href="https://tools.joinflyp.com/item/${r.flyp.id}">Flyp ürününü aç ↗</a>`:''}</div><div style="display:flex;gap:8px">${r.item.images[0]?`<img alt="Square ürünü" src="${esc(r.item.images[0])}" width="54" height="66" loading="lazy" style="object-fit:cover">`:''}${r.flyp?.image?`<img alt="Flyp ürünü" src="${esc(r.flyp.image)}" width="54" height="66" loading="lazy" style="object-fit:cover">`:''}</div></div>`).join('')||'<p class="small">Eşleşmemiş tekil ürün yok.</p>';
+  $('#bridgeCandidates').innerHTML=BRIDGE_CANDIDATES.map((r,i)=>`<div class="row" style="grid-template-columns:24px minmax(0,1fr) auto"><input type="checkbox" aria-label="${esc(r.item.sku)} eşleşmesini seç" class="bridge-pick" data-index="${i}" ${r.flyp?'':'disabled'} ${selected.has(r.item.sku)?'checked':''}><div><div class="producttitle">${esc(r.item.title)}</div><div class="small">${esc(r.item.sku)} · ${r.flyp?'Flyp: '+esc(r.flyp.id):esc(r.reason)}</div>${r.flyp?`<a class="small" target="_blank" rel="noopener" href="https://tools.joinflyp.com/item/${r.flyp.id}">Flyp ürününü aç ↗</a>`:`<select aria-label="${esc(r.item.sku)} için Flyp ürünü seç" data-bridge-manual="${i}" style="max-width:100%;margin-top:8px"><option value="">Elle Flyp ürününü seç…</option>${obs.filter(o=>!BRIDGE_SNAPSHOT.links.some(l=>l.flyp_id===o.id)).map(o=>`<option value="${esc(o.id)}">${esc(o.title)} · ${esc(o.id.slice(-8))}</option>`).join('')}</select>`}</div><div style="display:flex;gap:8px">${r.item.images[0]?`<img alt="Square ürünü" src="${esc(r.item.images[0])}" width="54" height="66" loading="lazy" style="object-fit:cover">`:''}${r.flyp?.image?`<img alt="Flyp ürünü" src="${esc(r.flyp.image)}" width="54" height="66" loading="lazy" style="object-fit:cover">`:''}</div></div>`).join('')||'<p class="small">Eşleşmemiş tekil ürün yok.</p>';
+  $('#bridgeCandidates').querySelectorAll('[data-bridge-manual]').forEach(el=>el.onchange=()=>{const r=BRIDGE_CANDIDATES[Number(el.dataset.bridgeManual)];BRIDGE_MANUAL.set(r.item.id,el.value);drawBridgeCandidates();});
 }
 async function saveBridgeLinks(){
   if(!$('#bridgeReviewed').checked)return toast('Önce seçtiğin eşleşmeleri kontrol ettiğini onayla.');
