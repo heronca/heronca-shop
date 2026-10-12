@@ -48,10 +48,10 @@ async function renderBag() {
   const s = await shop();
   const items = bag.get().map((id) => s.items.find((x) => x.id === id && !x.sold)).filter(Boolean);
   if (items.length !== bag.get().length) bag.set(items.map((x) => x.id));
-  const tier = (i) => s.bundle[Math.min(i, s.bundle.length - 1)];
+  const tier = (i) => Math.max(s.discount, s.bundle[Math.min(i, s.bundle.length - 1)]);
   const sorted = [...items].sort((a, b) => b.price - a.price);
-  const line = (x) => { const i = sorted.indexOf(x), p = tier(i); return { p, cost: Math.round(x.site_price * (100 - p) / 100) }; };
-  rows.innerHTML = items.length ? items.map((x) => { const l = line(x); return `<div class="row"><img src="${x.images[0]}" alt=""><div>${esc(x.title)}<div class="small">${esc(x.size)}${x.size ? " · " : ""}${l.p ? l.p + "% multi-buy" : "10% off online"}</div></div><div style="text-align:right"><b>${money(l.cost)}</b><br><s class="small">${money(x.price)}</s><br><button onclick="bag.remove('${x.id}')">Remove</button></div></div>`; }).join("") : `<p class="small">Your bag is empty.</p>`;
+  const line = (x) => { const i = sorted.indexOf(x), p = tier(i); return { p, cost: Math.round(x.price * (100 - p) / 100) }; };
+  rows.innerHTML = items.length ? items.map((x) => { const l = line(x); return `<div class="row"><img src="${x.images[0]}" alt=""><div>${esc(x.title)}<div class="small">${esc(x.size)}${x.size ? " · " : ""}${l.p}% off${l.p > s.discount ? " multi-buy" : " online"}</div></div><div style="text-align:right"><b>${money(l.cost)}</b><br><s class="small">${money(x.price)}</s><br><button onclick="bag.remove('${x.id}')">Remove</button></div></div>`; }).join("") : `<p class="small">Your bag is empty.</p>`;
   const sub = items.reduce((a, x) => a + line(x).cost, 0), full = items.reduce((a, x) => a + x.price, 0);
   const ship = !items.length || sub >= s.free_ship ? 0 : s.ship_fee;
   const next = tier(items.length);
@@ -71,7 +71,7 @@ function mrspaceCredit() {
 }
 function chrome() {
   document.body.insertAdjacentHTML("afterbegin", `
-  <div class="strip caps">Buy more, save more: 15% off your 2nd piece, up to 30% · Free US shipping over $80</div>
+  <div class="strip caps">20% off online · Multi-buy savings up to 30% · Free US shipping over $80</div>
   <header class="top"><div class="wrap bar"><a class="logo" href="/"><img src="/assets/heron-logo.png" alt="Heron CA"></a>
   <div class="right"><nav class="menu"><a href="/">Shop</a><a href="/about.html">About</a><a href="/about.html#visit">Visit</a></nav>
   <button class="bag caps" onclick="openBag()">Bag <b id="bagCount">0</b></button></div></div>
