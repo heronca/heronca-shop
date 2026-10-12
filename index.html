@@ -13,10 +13,6 @@
   <div class="hero-actions"><a class="btn" href="/about.html">About Heron CA <span aria-hidden="true">↗</span></a><a class="btn alt" href="/about.html#visit">Visit the shop <span aria-hidden="true">↗</span></a></div>
   <img class="bird" src="/assets/heron-bird.png" alt=""></div></section>
 <main class="wrap">
-  <nav class="home-discover" aria-label="Discover Heron CA">
-    <a href="/about.html"><div><span class="caps">A family shop, a curious eye</span><h2>Good pieces. A story behind each.</h2><p>Meet Heron CA and see how we choose what makes the rack.</p></div><span class="discover-arrow" aria-hidden="true">↗</span></a>
-    <a href="/about.html#visit"><div><span class="caps">Come find us</span><h2>A little Venice, in person.</h2><p>Gingerbread Court · Open daily, 11:00–5:30</p></div><span class="discover-arrow" aria-hidden="true">↗</span></a>
-  </nav>
   <div class="head"><h2 id="title">New arrivals</h2><span class="small" id="count"></span></div>
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px" id="bands"></div>
   <div class="grid" id="grid"><p class="empty">Loading the rack…</p></div>
@@ -44,7 +40,7 @@ const q = new URLSearchParams(location.search), cat = q.get("c") || "", band = q
 const BANDS = [["", "Any price"], ["u25", "Under $25"], ["25-50", "$25 to $50"], ["50-100", "$50 to $100"], ["100", "$100 and up"]];
 const inBand = (c) => !band || (band === "u25" ? c < 2500 : band === "25-50" ? c >= 2500 && c < 5000 : band === "50-100" ? c >= 5000 && c < 10000 : c >= 10000);
 $("#bands").innerHTML = BANDS.map(([v, l]) => { const p = new URLSearchParams(q); v ? p.set("p", v) : p.delete("p"); return `<a class="chip${v === band ? " on" : ""}" href="?${p}">${l}</a>`; }).join("");
-if (cat) { $("#title").textContent = cat; $("#hero").hidden = true; $(".home-discover").hidden = true; }
+if (cat) { $("#title").textContent = cat; $("#hero").hidden = true; }
 shop().then((s) => {
   const list = s.items.filter((x) => (!cat || x.category === cat) && inBand(x.site_price));
   $("#count").textContent = `${list.filter((x) => !x.sold).length} pieces · ${s.discount}% off online, multi-buy deals in your bag`;
